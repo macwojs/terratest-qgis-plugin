@@ -21,14 +21,14 @@
  *                                                                         *
  ***************************************************************************/
 """
-from PyQt5 import QtGui
-from PyQt5.QtWidgets import QFileDialog, QAbstractItemView
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
+from qgis.PyQt import QtGui
+from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
 # Initialize Qt resources from file resources.py
-from qgis._core import QgsMessageLog
+from qgis._core import QgsMessageLog, QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY
 
 from .resources import *
 # Import the code for the dialog
@@ -191,13 +191,50 @@ class Terratest:
             self.dlg.filesView.model().appendRow(item)
 
     def cancel(self):
+        self.delete_all()
         self.dlg.close()
 
     def generate(self):
-        # TODO Odczytanie danych z fileView
-        # TODO czytanie danego pliku z wykorzystaniem TerraLib
-        # TODO Utworzenie warstwy wektorowej
-        pass
+        model = self.dlg.filesView.model()
+        if model.rowCount():
+            vl = QgsVectorLayer("Point", "temporary_points", "memory")
+            pr = vl.dataProvider()
+            pr.addAttributes([
+                QgsField("name", QVariant.String),
+                QgsField("serial_number", QVariant.String),
+                QgsField("calibration", QVariant.Date),
+                QgsField("date", QVariant.DateTime),
+                QgsField("X", QVariant.Double),
+                QgsField("Y", QVariant.Double),
+                QgsField("s1", QVariant.Double),
+                QgsField("v1max", QVariant.Double),
+                QgsField("s1max", QVariant.Double),
+                QgsField("s2", QVariant.Double),
+                QgsField("v2max", QVariant.Double),
+                QgsField("s2max", QVariant.Double),
+                QgsField("s3", QVariant.Double),
+                QgsField("v3max", QVariant.Double),
+                QgsField("s3max", QVariant.Double),
+            ])
+
+            for row in range(model.rowCount()):
+                index = model.takeItem(row)
+
+                data = TerraLib(index.text())
+
+                # TODO czytanie danego pliku z wykorzystaniem TerraLib
+
+                # TODO Zapis do warstwy wektorowej
+                fet = QgsFeature()
+                fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(10, 10)))
+                # fet.setAttributes([
+                #     "Johny",
+                #     2,
+                #     0.3
+                # ])
+                pr.addFeatures([fet])
+
+        self.delete_all()
 
     def delete(self):
         selected_list = self.dlg.filesView.selectedIndexes()
