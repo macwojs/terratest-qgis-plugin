@@ -22,12 +22,14 @@
  ***************************************************************************/
 """
 from PyQt5 import QtGui
-from PyQt5.QtWidgets import QFileDialog
+from PyQt5.QtWidgets import QFileDialog, QAbstractItemView
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
 # Initialize Qt resources from file resources.py
+from qgis._core import QgsMessageLog
+
 from .resources import *
 # Import the code for the dialog
 from .terratest_dialog import TerratestDialog
@@ -86,18 +88,17 @@ class Terratest:
         # noinspection PyTypeChecker,PyArgumentList,PyCallByClass
         return QCoreApplication.translate('Terratest', message)
 
-
     def add_action(
-        self,
-        icon_path,
-        text,
-        callback,
-        enabled_flag=True,
-        add_to_menu=True,
-        add_to_toolbar=True,
-        status_tip=None,
-        whats_this=None,
-        parent=None):
+            self,
+            icon_path,
+            text,
+            callback,
+            enabled_flag=True,
+            add_to_menu=True,
+            add_to_toolbar=True,
+            status_tip=None,
+            whats_this=None,
+            parent=None):
         """Add a toolbar icon to the toolbar.
 
         :param icon_path: Path to the icon for this action. Can be a resource
@@ -174,7 +175,6 @@ class Terratest:
         # will be set False in run()
         self.first_start = True
 
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -201,9 +201,9 @@ class Terratest:
 
     def delete(self):
         selected_list = self.dlg.filesView.selectedIndexes()
-        if selected_list:
-            for i in selected_list:
-                self.dlg.filesView.model().takeRow(i.row())
+        selected_list = sorted(selected_list, key=lambda x: -x.row())
+        for i in selected_list:
+            self.dlg.filesView.model().takeRow(i.row())
 
     def delete_all(self):
         self.dlg.filesView.model().clear()
@@ -219,13 +219,13 @@ class Terratest:
 
             model = QtGui.QStandardItemModel()
             self.dlg.filesView.setModel(model)
+            self.dlg.filesView.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
             self.dlg.openButton.clicked.connect(self.choose_files)
             self.dlg.cancelButton.clicked.connect(self.cancel)
             self.dlg.generateButton.clicked.connect(self.generate)
             self.dlg.deleteButton.clicked.connect(self.delete)
             self.dlg.deleteAllButton.clicked.connect(self.delete_all)
-
 
         # show the dialog
         self.dlg.show()
@@ -236,4 +236,3 @@ class Terratest:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
             pass
-
