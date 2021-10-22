@@ -21,20 +21,20 @@
  *                                                                         *
  ***************************************************************************/
 """
+import json
+import os.path
+
 from qgis.PyQt import QtGui
-from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-
+from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 # Initialize Qt resources from file resources.py
-from qgis._core import QgsMessageLog, QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY
+from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY
 
 from .resources import *
 # Import the code for the dialog
 from .terratest_dialog import TerratestDialog
-import os.path
-
 from .terratest_lib import Terratest as TerraLib
 
 
@@ -197,7 +197,8 @@ class Terratest:
     def generate(self):
         model = self.dlg.filesView.model()
         if model.rowCount():
-            vl = QgsVectorLayer("Point", "temporary_points", "memory")
+            vl = self.iface.addVectorLayer("Point", "temporary_points", "memory")
+            # vl = QgsVectorLayer("Point", "temporary_points", "memory")
             pr = vl.dataProvider()
             pr.addAttributes([
                 QgsField("name", QVariant.String),
@@ -206,33 +207,33 @@ class Terratest:
                 QgsField("date", QVariant.DateTime),
                 QgsField("X", QVariant.Double),
                 QgsField("Y", QVariant.Double),
-                QgsField("s1", QVariant.Double),
+                QgsField("s1", QVariant.String),
                 QgsField("v1max", QVariant.Double),
                 QgsField("s1max", QVariant.Double),
-                QgsField("s2", QVariant.Double),
+                QgsField("s2", QVariant.String),
                 QgsField("v2max", QVariant.Double),
                 QgsField("s2max", QVariant.Double),
-                QgsField("s3", QVariant.Double),
+                QgsField("s3", QVariant.String),
                 QgsField("v3max", QVariant.Double),
                 QgsField("s3max", QVariant.Double),
+                QgsField("Evd", QVariant.Double),
+                QgsField("average_s", QVariant.Double),
+                QgsField("s/v", QVariant.Double)
             ])
+            vl.updateFields()
 
             for row in range(model.rowCount()):
                 index = model.takeItem(row)
 
                 data = TerraLib(index.text())
+                cords = data.coordinates_g()
 
-                # TODO czytanie danego pliku z wykorzystaniem TerraLib
-
-                # TODO Zapis do warstwy wektorowej
                 fet = QgsFeature()
-                fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(10, 10)))
-                # fet.setAttributes([
-                #     "Johny",
-                #     2,
-                #     0.3
-                # ])
+                fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(cords[0], cords[1])))
+                fet.setAttributes(data.atrForLayer())
                 pr.addFeatures([fet])
+
+                vl.updateExtents()
 
         self.delete_all()
 

@@ -1,8 +1,10 @@
 # Terratest
 # Zawiera metody do odczytywania danych z plików wytowrzonych przy pomocy sondy geologicznej Terratest
+import json
 from datetime import datetime
 
 import numpy
+from PyQt5 import QtCore
 
 
 class Terratest(object):
@@ -199,3 +201,48 @@ class Terratest(object):
                   "\nWspołrzędne badania: " + self.latitude + "\t" + "\t" + self.longitude)
 
         return report
+
+    def clacAll(self):
+        self.hammer()
+        self.name()
+        self.test()
+        self.coordinates()
+        self.drop1()
+        self.drop2()
+        self.drop3()
+        self.other()
+
+    def atrForLayer(self):
+        self.hammer()
+        self.name()
+        self.test()
+        self.coordinates()
+        self.drop1()
+        self.drop2()
+        self.drop3()
+        self.other()
+
+        cords = self.coordinates_g()
+        data = [
+            "a",
+            self.serial_number,
+            QtCore.QDate.fromString(self.calibration_date.strftime("%d.%m.%Y"), "dd.MM.yyyy"),
+            QtCore.QDateTime.fromString(self.test_datetime.strftime("%d.%m.%Y %H:%M:%S"),
+                                        "dd.MM.yyyy hh:mm:ss"),
+            cords[0],
+            cords[1],
+            json.dumps(self.s1),
+            self.v1max,
+            self.s1max,
+            json.dumps(self.s2),
+            self.v2max,
+            self.s2max,
+            json.dumps(self.s3),
+            self.v3max,
+            self.s3max,
+            self.evd,
+            self.average_s,
+            self.s_v
+        ]
+
+        return data
