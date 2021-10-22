@@ -1,11 +1,13 @@
-#Terratest
-#Zawiera metody do odczytywania danych z plików wytowrzonych przy pomocy sondy geologicznej Terratest
+# Terratest
+# Zawiera metody do odczytywania danych z plików wytowrzonych przy pomocy sondy geologicznej Terratest
+from datetime import datetime
 
 import numpy
 
 
 class Terratest(object):
     """Dane z badania przy użyciu sondy terratest"""
+
     def __init__(self, path):
         file = open(path, 'rb')
         self.data = file.read()
@@ -13,52 +15,43 @@ class Terratest(object):
 
         self.hammer_weight = ""
         self.serial_number = ""
-        self.calibration_day = ""
-        self.calibration_mounth = ""
-        self.calibration_year = ""
+        self.calibration_date = None
 
         self.test_name = ""
 
-        self.test_year = ""
-        self.test_mounth = ""
-        self.test_day = ""
-        self.test_hour = ""
-        self.test_minute = ""
-        self.test_secound = ""
-        self.test_weekday = ""
+        self.test_datetime = None
 
         self.latitude = ""
         self.longitude = ""
 
         self.s1 = []
-        self.v1max = ""
-        self.s1max = ""
+        self.v1max = 0
+        self.s1max = 0
 
         self.s2 = []
-        self.v2max = ""
-        self.s2max = ""
+        self.v2max = 0
+        self.s2max = 0
 
         self.s3 = []
-        self.v3max = ""
-        self.s3max = ""
+        self.v3max = 0
+        self.s3max = 0
 
-        self.average_s = ""
-        self.evd = ""
-        self.s_v = ""
+        self.average_s = 0
+        self.evd = 0
+        self.s_v = 0
 
     def hammer(self):
         if self.serial_number:
-            return self.serial_number, self.hammer_weight, self.calibration_day, self.calibration_mounth, self.calibration_year
+            return self.serial_number, self.hammer_weight, self.calibration_date
         else:
             for i in range(2, 14):
                 self.serial_number += chr(self.data[i])
 
             self.hammer_weight = self.data[14]
-            self.calibration_day = self.data[15]
-            self.calibration_mounth = self.data[16]
-            self.calibration_year = self.data[17]
+            date = str(self.data[15]) + " " + str(self.data[16]) + " " + str(self.data[17])
+            self.calibration_date = datetime.strptime(date, '%d %m %y')
 
-            return self.serial_number, self.hammer_weight, self.calibration_day, self.calibration_mounth, self.calibration_year
+            return self.serial_number, self.hammer_weight, self.calibration_date
 
     def name(self):
         if self.test_name:
@@ -69,25 +62,29 @@ class Terratest(object):
             return self.test_name
 
     def test(self):
-        if self.test_year:
-            return self.test_year, self.test_mounth, self.test_day, self.test_hour, self.test_minute, self.test_secound, self.test_weekday
+        if self.test_datetime:
+            return self.test_datetime
         else:
             a = (hex(self.data[19]))
-            self.test_year = a[2:]
+            test_year = a[2:]
             a = (hex(self.data[20]))
-            self.test_mounth = a[2:]
+            test_mounth = a[2:]
             a = (hex(self.data[21]))
-            self.test_day = a[2:]
+            test_day = a[2:]
             a = (hex(self.data[22]))
-            self.test_hour = a[2:]
+            test_hour = a[2:]
             a = (hex(self.data[23]))
-            self.test_minute = a[2:]
+            test_minute = a[2:]
             a = (hex(self.data[24]))
-            self.test_secound = a[2:]
-            a = (hex(self.data[25]))
-            self.test_weekday = a[2:]
+            test_secound = a[2:]
+            # a = (hex(self.data[25]))
+            # test_weekday = a[2:]
 
-            return self.test_year, self.test_mounth, self.test_day, self.test_hour, self.test_minute, self.test_secound, self.test_weekday
+            date_time = str(test_year) + "/" + str(test_mounth) + "/" + str(test_day) + " " + str(
+                test_hour) + ":" + str(test_minute) + ":" + str(test_secound)
+            self.test_datetime = datetime.strptime(date_time, '%y/%m/%d %H:%M:%S')
+
+            return self.test_datetime
 
     def coordinates(self):
         if self.latitude:
@@ -110,7 +107,7 @@ class Terratest(object):
         deg_long = longitude[:3]
         min_long = longitude[3:(len_long - 1)]
 
-        latitude_g = float(deg_lati) + (float(min_lati)/60)
+        latitude_g = float(deg_lati) + (float(min_lati) / 60)
         longitude_g = float(deg_long) + (float(min_long) / 60)
 
         # Dodanie znaków ujemnych przed współrzędnymi dla odpowiednich półkul
@@ -126,7 +123,7 @@ class Terratest(object):
             return self.s1, self.v1max, self.s1max
         else:
             for i in range(47, 167):
-                self.s1.append(self.data[i]/200)
+                self.s1.append(self.data[i] / 200)
                 self.v1max = float((self.data[167] * 16 * 16 + self.data[168]) / 10000)
                 self.s1max = float((self.data[169] * 16 * 16 + self.data[170]) / 1000)
             return self.s1, self.v1max, self.s1max
@@ -136,7 +133,7 @@ class Terratest(object):
             return self.s2, self.v2max, self.s2max
         else:
             for i in range(256, 376):
-                self.s2.append(self.data[i]/200)
+                self.s2.append(self.data[i] / 200)
                 self.v2max = float((self.data[376] * 16 * 16 + self.data[377]) / 10000)
                 self.s2max = float((self.data[378] * 16 * 16 + self.data[379]) / 1000)
             return self.s2, self.v2max, self.s2max
@@ -146,9 +143,9 @@ class Terratest(object):
             return self.s3, self.v3max, self.s3max
         else:
             for i in range(384, 504):
-                self.s3.append(self.data[i]/200)
-            self.v3max = float((self.data[504]*16*16 + self.data[505])/10000)
-            self.s3max = float((self.data[506]*16*16 + self.data[507])/1000)
+                self.s3.append(self.data[i] / 200)
+            self.v3max = float((self.data[504] * 16 * 16 + self.data[505]) / 10000)
+            self.s3max = float((self.data[506] * 16 * 16 + self.data[507]) / 1000)
             return self.s3, self.v3max, self.s3max
 
     def plotdata(self):
@@ -197,10 +194,8 @@ class Terratest(object):
 
         report = ("Badanie: " + self.test_name +
                   "\nNumer seryjny młota: " + str(self.serial_number) +
-                  "\nKalibracja tego młota została wykonana:" + str(self.calibration_day) +
-                  "." + str(self.calibration_mounth) + "." + str(self.calibration_year) +
-                  "\nBadanie zostało wykonane: "+ str(self.test_day) +"." + str(self.test_mounth) +"." + str(self.test_year) + "\t" +
-                  str(self.test_hour) + ":" + str(self.test_minute) + ":" + str(self.test_secound) +
-                  "\nWspołrzędne badania: " + self.latitude + "\t"+"\t"+ self.longitude)
+                  "\nKalibracja tego młota została wykonana: " + self.calibration_date.strftime("%d.%m.%Y") +
+                  "\nBadanie zostało wykonane: " + self.test_datetime.strftime("%d.%m.%Y %H:%M:%S") +
+                  "\nWspołrzędne badania: " + self.latitude + "\t" + "\t" + self.longitude)
 
         return report
