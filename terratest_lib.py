@@ -3,7 +3,6 @@
 import json
 from datetime import datetime
 
-import numpy
 from PyQt5 import QtCore
 
 
@@ -12,94 +11,242 @@ class Terratest(object):
 
     def __init__(self, path):
         file = open(path, 'rb')
-        self.data = file.read()
+        self.__data = file.read()
         file.close()
 
-        self.hammer_weight = ""
-        self.serial_number = ""
-        self.calibration_date = None
+        self.__name = None
+        self.__serial_number = None
+        self.__hammer_weight = None
+        self.__calibration_date = None
+        self.__test_datetime = None
+        self.__latitude = None
+        self.__longitude = None
 
-        self.test_name = ""
+        self.__s1 = None
+        self.__v1max = None
+        self.__s1max = None
 
-        self.test_datetime = None
+        self.__s2 = None
+        self.__v2max = None
+        self.__s2max = None
 
-        self.latitude = ""
-        self.longitude = ""
+        self.__s3 = None
+        self.__v3max = None
+        self.__s3max = None
 
-        self.s1 = []
-        self.v1max = 0
-        self.s1max = 0
+        self.__average_s = None
+        self.__average_v = None
+        self.__evd = None
+        self.__s_v = None
 
-        self.s2 = []
-        self.v2max = 0
-        self.s2max = 0
-
-        self.s3 = []
-        self.v3max = 0
-        self.s3max = 0
-
-        self.average_s = 0
-        self.evd = 0
-        self.s_v = 0
-
-    def hammer(self):
-        if self.serial_number:
-            return self.serial_number, self.hammer_weight, self.calibration_date
-        else:
-            for i in range(2, 14):
-                self.serial_number += chr(self.data[i])
-
-            self.hammer_weight = self.data[14]
-            date = str(self.data[15]) + " " + str(self.data[16]) + " " + str(self.data[17])
-            self.calibration_date = datetime.strptime(date, '%d %m %y')
-
-            return self.serial_number, self.hammer_weight, self.calibration_date
-
+    @property
     def name(self):
-        if self.test_name:
-            return self.test_name
-        else:
+        if self.__name is None:
+            self.__name = ""
             for i in range(172, 193):
-                self.test_name += chr(self.data[i])
-            return self.test_name
+                self.__name += chr(self.__data[i])
 
-    def test(self):
-        if self.test_datetime:
-            return self.test_datetime
+            return self.__name
         else:
-            a = (hex(self.data[19]))
+            return self.__name
+
+    @property
+    def serial_number(self):
+        if self.__serial_number is None:
+            self.__serial_number = ""
+            for i in range(2, 14):
+                self.__serial_number += chr(self.__data[i])
+
+            return self.__serial_number
+        else:
+            return self.__serial_number
+
+    @property
+    def hammer_height(self):
+        if self.__hammer_weight is None:
+            self.__hammer_weight = self.__data[14]
+
+            return self.__hammer_weight
+        else:
+            return self.__hammer_weight
+
+    @property
+    def calibration_date(self):
+        if self.__calibration_date is None:
+            date = str(self.__data[15]) + " " + str(self.__data[16]) + " " + str(self.__data[17])
+            self.__calibration_date = datetime.strptime(date, '%d %m %y')
+
+            return self.__calibration_date
+        else:
+            return self.__calibration_date
+
+    @property
+    def test_datetime(self):
+        if self.__test_datetime is None:
+            a = (hex(self.__data[19]))
             test_year = a[2:]
-            a = (hex(self.data[20]))
+            a = (hex(self.__data[20]))
             test_mounth = a[2:]
-            a = (hex(self.data[21]))
+            a = (hex(self.__data[21]))
             test_day = a[2:]
-            a = (hex(self.data[22]))
+            a = (hex(self.__data[22]))
             test_hour = a[2:]
-            a = (hex(self.data[23]))
+            a = (hex(self.__data[23]))
             test_minute = a[2:]
-            a = (hex(self.data[24]))
-            test_secound = a[2:]
-            # a = (hex(self.data[25]))
-            # test_weekday = a[2:]
+            a = (hex(self.__data[24]))
+            test_seconds = a[2:]
 
             date_time = str(test_year) + "/" + str(test_mounth) + "/" + str(test_day) + " " + str(
-                test_hour) + ":" + str(test_minute) + ":" + str(test_secound)
-            self.test_datetime = datetime.strptime(date_time, '%y/%m/%d %H:%M:%S')
+                test_hour) + ":" + str(test_minute) + ":" + str(test_seconds)
+            self.__test_datetime = datetime.strptime(date_time, '%y/%m/%d %H:%M:%S')
 
-            return self.test_datetime
-
-    def coordinates(self):
-        if self.latitude:
-            return self.latitude, self.longitude
+            return self.__test_datetime
         else:
+            return self.__test_datetime
+
+    @property
+    def latitude(self):
+        if self.__latitude is None:
+            self.__latitude = ""
             for i in range(26, 36):
-                self.latitude += chr(self.data[i])
+                self.__latitude += chr(self.__data[i])
+
+            return self.__latitude
+        else:
+            return self.__latitude
+
+    @property
+    def longitude(self):
+        if self.__longitude is None:
+            self.__longitude = ""
             for i in range(36, 47):
-                self.longitude += chr(self.data[i])
-            return self.latitude, self.longitude
+                self.__longitude += chr(self.__data[i])
+
+            return self.__longitude
+        else:
+            return self.__longitude
+
+    @property
+    def s1(self):
+        if self.__s1 is None:
+            self.__s1 = []
+            for i in range(47, 167):
+                self.__s1.append(self.__data[i] / 200)
+
+            return self.__s1
+        else:
+            return self.__s1
+
+    @property
+    def v1max(self):
+        if self.__v1max is None:
+            self.__v1max = float((self.__data[167] * 16 * 16 + self.__data[168]) / 10000)
+
+            return self.__v1max
+        else:
+            return self.__v1max
+
+    @property
+    def s1max(self):
+        if self.__s1max is None:
+            self.__s1max = float((self.__data[169] * 16 * 16 + self.__data[170]) / 1000)
+
+            return self.__s1max
+        else:
+            return self.__s1max
+
+    @property
+    def s2(self):
+        if self.__s2 is None:
+            self.__s2 = []
+            for i in range(256, 376):
+                self.__s2.append(self.__data[i] / 200)
+
+            return self.__s2
+        else:
+            return self.__s2
+
+    @property
+    def v2max(self):
+        if self.__v2max is None:
+            self.__v2max = float((self.__data[376] * 16 * 16 + self.__data[377]) / 10000)
+
+            return self.__v2max
+        else:
+            return self.__v2max
+
+    @property
+    def s2max(self):
+        if self.__s2max is None:
+            self.__s2max = float((self.__data[378] * 16 * 16 + self.__data[379]) / 1000)
+
+            return self.__s2max
+        else:
+            return self.__s2max
+
+    @property
+    def s3(self):
+        if self.__s3 is None:
+            self.__s3 = []
+            for i in range(384, 504):
+                self.__s3.append(self.__data[i] / 200)
+
+            return self.__s3
+        else:
+            return self.__s3
+
+    @property
+    def v3max(self):
+        if self.__v3max is None:
+            self.__v3max = float((self.__data[504] * 16 * 16 + self.__data[505]) / 10000)
+
+            return self.__v3max
+        else:
+            return self.__v3max
+
+    @property
+    def s3max(self):
+        if self.__s3max is None:
+            self.__s3max = float((self.__data[506] * 16 * 16 + self.__data[507]) / 1000)
+
+            return self.__s3max
+        else:
+            return self.__s3max
+
+    @property
+    def average_s(self):
+        if self.__average_s is None:
+            self.__average_s = round((self.s1max + self.s2max + self.s3max) / 3, 3)
+
+            return self.__average_s
+        else:
+            return self.__average_s
+
+    @property
+    def evd(self):
+        if self.__evd is None:
+            self.__evd = round(22.5 / self.average_s, 3)
+
+            return self.__evd
+        else:
+            return self.__evd
+
+    @property
+    def average_v(self):
+        if self.__average_v is None:
+            self.__average_v = round((self.v1max + self.v2max + self.v3max) / 3, 3)
+
+            return self.__average_v
+        else:
+            return self.__average_v
+
+    @property
+    def s_v(self):
+        return round(self.average_s / self.average_v, 3)
 
     def coordinates_g(self):
-        latitude, longitude = self.coordinates()
+        latitude = self.latitude
+        longitude = self.longitude
 
         len_lati = len(latitude)
         deg_lati = latitude[:2]
@@ -120,111 +267,10 @@ class Terratest(object):
 
         return latitude_g, longitude_g
 
-    def drop1(self):
-        if self.s1:
-            return self.s1, self.v1max, self.s1max
-        else:
-            for i in range(47, 167):
-                self.s1.append(self.data[i] / 200)
-                self.v1max = float((self.data[167] * 16 * 16 + self.data[168]) / 10000)
-                self.s1max = float((self.data[169] * 16 * 16 + self.data[170]) / 1000)
-            return self.s1, self.v1max, self.s1max
-
-    def drop2(self):
-        if self.s2:
-            return self.s2, self.v2max, self.s2max
-        else:
-            for i in range(256, 376):
-                self.s2.append(self.data[i] / 200)
-                self.v2max = float((self.data[376] * 16 * 16 + self.data[377]) / 10000)
-                self.s2max = float((self.data[378] * 16 * 16 + self.data[379]) / 1000)
-            return self.s2, self.v2max, self.s2max
-
-    def drop3(self):
-        if self.s3:
-            return self.s3, self.v3max, self.s3max
-        else:
-            for i in range(384, 504):
-                self.s3.append(self.data[i] / 200)
-            self.v3max = float((self.data[504] * 16 * 16 + self.data[505]) / 10000)
-            self.s3max = float((self.data[506] * 16 * 16 + self.data[507]) / 1000)
-            return self.s3, self.v3max, self.s3max
-
-    def plotdata(self):
-        self.drop1()
-        self.drop2()
-        self.drop3()
-
-        s1 = self.s1
-        s2 = self.s2
-        s3 = self.s3
-
-        for i in range(len(s1)):
-            s1[i] = s1[i] * (-1)
-
-        for i in range(len(s2)):
-            s2[i] = s2[i] * (-1)
-
-        for i in range(len(s1)):
-            s3[i] = s3[i] * (-1)
-
-        step = numpy.arange(0, 24, 0.2)
-
-        return s1, s2, s3, step
-
-    def other(self):
-        if self.evd:
-            return self.average_s, self.evd, self.s_v
-        elif self.s1max and self.s2max and self.s3max:
-            self.average_s = round((self.s1max + self.s2max + self.s3max) / 3, 3)
-            average_v = round((self.v1max + self.v2max + self.v3max) / 3, 3)
-            self.s_v = round(self.average_s / average_v, 3)
-            self.evd = round(22.5 / self.average_s, 3)
-            return self.average_s, self.evd, self.s_v
-        else:
-            return "Nie można wyliczyć parametrów, najpierw wylicz drop1, drop2 i drop3"
-
-    def generete_report(self):
-        self.hammer()
-        self.name()
-        self.test()
-        self.coordinates()
-        self.drop1()
-        self.drop2()
-        self.drop3()
-        self.other()
-
-        report = ("Badanie: " + self.test_name +
-                  "\nNumer seryjny młota: " + str(self.serial_number) +
-                  "\nKalibracja tego młota została wykonana: " + self.calibration_date.strftime("%d.%m.%Y") +
-                  "\nBadanie zostało wykonane: " + self.test_datetime.strftime("%d.%m.%Y %H:%M:%S") +
-                  "\nWspołrzędne badania: " + self.latitude + "\t" + "\t" + self.longitude)
-
-        return report
-
-    def clacAll(self):
-        self.hammer()
-        self.name()
-        self.test()
-        self.coordinates()
-        self.drop1()
-        self.drop2()
-        self.drop3()
-        self.other()
-
-    def atrForLayer(self):
-        self.hammer()
-        self.name()
-        self.test()
-        self.coordinates()
-        self.drop1()
-        self.drop2()
-        self.drop3()
-        self.other()
-
+    def atr_for_layer(self):
         cords = self.coordinates_g()
         data = [
-            "a",
+            self.name,
             self.serial_number,
             QtCore.QDate.fromString(self.calibration_date.strftime("%d.%m.%Y"), "dd.MM.yyyy"),
             QtCore.QDateTime.fromString(self.test_datetime.strftime("%d.%m.%Y %H:%M:%S"),

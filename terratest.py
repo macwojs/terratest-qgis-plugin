@@ -198,7 +198,6 @@ class Terratest:
         model = self.dlg.filesView.model()
         if model.rowCount():
             vl = self.iface.addVectorLayer("Point", "temporary_points", "memory")
-            # vl = QgsVectorLayer("Point", "temporary_points", "memory")
             pr = vl.dataProvider()
             pr.addAttributes([
                 QgsField("name", QVariant.String),
@@ -228,9 +227,10 @@ class Terratest:
                 data = TerraLib(index.text())
                 cords = data.coordinates_g()
 
+                # TODO wspolrzedne ustawic na poprawne
                 fet = QgsFeature()
                 fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(cords[0], cords[1])))
-                fet.setAttributes(data.atrForLayer())
+                fet.setAttributes(data.atr_for_layer())
                 pr.addFeatures([fet])
 
                 vl.updateExtents()
