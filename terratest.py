@@ -168,7 +168,7 @@ class Terratest:
         icon_path = ':/plugins/terratest/icon.png'
         self.add_action(
             icon_path,
-            text=self.tr(u'Terratest'),
+            text=self.tr(u'Wczytaj dane'),
             callback=self.run,
             parent=self.iface.mainWindow())
 
@@ -197,7 +197,7 @@ class Terratest:
     def generate(self):
         model = self.dlg.filesView.model()
         if model.rowCount():
-            vl = self.iface.addVectorLayer("Point", "temporary_points", "memory")
+            vl = self.iface.addVectorLayer("Point?crs=epsg:4326", "terratest_points", "memory")
             pr = vl.dataProvider()
             pr.addAttributes([
                 QgsField("name", QVariant.String),
@@ -227,15 +227,14 @@ class Terratest:
                 data = TerraLib(index.text())
                 cords = data.coordinates_g()
 
-                # TODO wspolrzedne ustawic na poprawne
                 fet = QgsFeature()
-                fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(cords[0], cords[1])))
+                fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(cords[1], cords[0])))
                 fet.setAttributes(data.atr_for_layer())
                 pr.addFeatures([fet])
 
                 vl.updateExtents()
 
-        self.delete_all()
+        self.cancel()
 
     def delete(self):
         selected_list = self.dlg.filesView.selectedIndexes()
