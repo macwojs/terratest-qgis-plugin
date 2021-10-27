@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>300</height>
+    <width>554</width>
+    <height>380</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,9 +16,9 @@
   <widget class="QPushButton" name="openButton">
    <property name="geometry">
     <rect>
-     <x>290</x>
+     <x>407</x>
      <y>20</y>
-     <width>88</width>
+     <width>121</width>
      <height>34</height>
     </rect>
    </property>
@@ -29,22 +29,22 @@
   <widget class="QPushButton" name="generateButton">
    <property name="geometry">
     <rect>
-     <x>190</x>
-     <y>260</y>
-     <width>88</width>
+     <x>270</x>
+     <y>330</y>
+     <width>131</width>
      <height>34</height>
     </rect>
    </property>
    <property name="text">
-    <string>Generuj</string>
+    <string>Wczytaj</string>
    </property>
   </widget>
   <widget class="QPushButton" name="cancelButton">
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>260</y>
-     <width>88</width>
+     <x>407</x>
+     <y>330</y>
+     <width>131</width>
      <height>34</height>
     </rect>
    </property>
@@ -57,17 +57,17 @@
     <rect>
      <x>20</x>
      <y>20</y>
-     <width>256</width>
-     <height>231</height>
+     <width>381</width>
+     <height>301</height>
     </rect>
    </property>
   </widget>
   <widget class="QPushButton" name="deleteAllButton">
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>180</y>
-     <width>88</width>
+     <x>407</x>
+     <y>250</y>
+     <width>131</width>
      <height>34</height>
     </rect>
    </property>
@@ -78,9 +78,9 @@
   <widget class="QPushButton" name="deleteButton">
    <property name="geometry">
     <rect>
-     <x>290</x>
-     <y>220</y>
-     <width>88</width>
+     <x>407</x>
+     <y>290</y>
+     <width>131</width>
      <height>34</height>
     </rect>
    </property>

@@ -6,7 +6,7 @@ from datetime import datetime
 from PyQt5 import QtCore
 
 
-class Terratest(object):
+class TerratestRead(object):
     """Dane z badania przy użyciu sondy terratest"""
 
     def __init__(self, path):
@@ -292,3 +292,106 @@ class Terratest(object):
         ]
 
         return data
+
+
+class TerratestCalculate(object):
+    SAND_FINE = 'piasek drobny'
+    SAND_MEDIUM = 'piasek średni'
+    SAND_COARSE = 'piasek gruby'
+    MESS = 'pospółka'
+    GRAVEL = 'żwir'
+
+    GRANULARITY_CONTINUOUS = 'ciągłe'
+    GRANULARITY_DISCONTINUOUS = 'nieciągłe'
+
+    SOILS = [
+        SAND_FINE,
+        SAND_MEDIUM,
+        SAND_COARSE,
+        MESS,
+        GRAVEL
+    ]
+
+    GRANULARITIES = [
+        GRANULARITY_CONTINUOUS,
+        GRANULARITY_DISCONTINUOUS
+    ]
+
+    @staticmethod
+    def calculate_is(granularity, soil, evd):
+        p1 = 0
+        p2 = 0
+        if granularity == TerratestCalculate.GRANULARITY_CONTINUOUS:
+            if soil == TerratestCalculate.SAND_FINE:
+                p1 = 0.0016
+                p2 = 0.93
+            elif soil == TerratestCalculate.SAND_MEDIUM:
+                p1 = 0.0015
+                p2 = 0.93
+            elif soil == TerratestCalculate.SAND_COARSE:
+                p1 = 0.0015
+                p2 = 0.93
+            elif soil == TerratestCalculate.MESS:
+                p1 = 0.0013
+                p2 = 0.93
+            elif soil == TerratestCalculate.GRAVEL:
+                p1 = 0.0012
+                p2 = 0.92
+        elif granularity == TerratestCalculate.GRANULARITY_DISCONTINUOUS:
+            if soil == TerratestCalculate.SAND_FINE:
+                p1 = 0.0013
+                p2 = 0.94
+            elif soil == TerratestCalculate.SAND_MEDIUM:
+                p1 = 0.0013
+                p2 = 0.93
+            elif soil == TerratestCalculate.SAND_COARSE:
+                p1 = 0.0013
+                p2 = 0.94
+            elif soil == TerratestCalculate.MESS:
+                p1 = 0.0013
+                p2 = 0.93
+            elif soil == TerratestCalculate.GRAVEL:
+                p1 = 0.0011
+                p2 = 0.93
+
+        return p1 * evd + p2
+
+    @staticmethod
+    def calculate_e2(granularity, soil, evd):
+        p1 = 0
+        p2 = 0
+
+        if granularity == TerratestCalculate.GRANULARITY_CONTINUOUS:
+            if soil == TerratestCalculate.SAND_FINE:
+                p1 = 2.06
+                p2 = -9.2
+            elif soil == TerratestCalculate.SAND_MEDIUM:
+                p1 = 1.91
+                p2 = 9.17
+            elif soil == TerratestCalculate.SAND_COARSE:
+                p1 = 2.03
+                p2 = -8.35
+            elif soil == TerratestCalculate.MESS:
+                p1 = 1.7
+                p2 = 10.56
+            elif soil == TerratestCalculate.GRAVEL:
+                p1 = 1.86
+                p2 = 2.08
+        elif granularity == TerratestCalculate.GRANULARITY_DISCONTINUOUS:
+            if soil == TerratestCalculate.SAND_FINE:
+                p1 = 1.57
+                p2 = 5.91
+            elif soil == TerratestCalculate.SAND_MEDIUM:
+                p1 = 2.54
+                p2 = -2.86
+            elif soil == TerratestCalculate.SAND_COARSE:
+                p1 = 2.19
+                p2 = -5.07
+            elif soil == TerratestCalculate.MESS:
+                p1 = 1.85
+                p2 = 3.54
+            elif soil == TerratestCalculate.GRAVEL:
+                p1 = 1.57
+                p2 = 5.91
+
+        return p1 * evd + p2

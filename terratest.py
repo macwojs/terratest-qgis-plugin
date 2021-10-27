@@ -21,21 +21,21 @@
  *                                                                         *
  ***************************************************************************/
 """
-import json
 import os.path
 
+from PyQt5.QtWidgets import QMessageBox
 from qgis.PyQt import QtGui
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 # Initialize Qt resources from file resources.py
-from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY
+from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsMessageLog, QgsVectorLayer
 
-from .resources import *
 # Import the code for the dialog
-from .terratest_dialog import TerratestDialog
-from .terratest_lib import Terratest as TerraLib
+from .terratest_dialog_base import TerratestDialog
+from .terratest_dialog_is import TerratestDialogIS
+from .terratest_lib import TerratestRead as TerraLib, TerratestCalculate
 
 
 class Terratest:
@@ -72,6 +72,12 @@ class Terratest:
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
+        self.first_start_is = None
+
+        self.dlg = TerratestDialog()
+        self.dlg_is = TerratestDialogIS()
+
+        self.layers_is = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -172,8 +178,15 @@ class Terratest:
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Przelicz IS'),
+            callback=self.run_is,
+            parent=self.iface.mainWindow())
+
         # will be set False in run()
         self.first_start = True
+        self.first_start_is = True
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -252,7 +265,6 @@ class Terratest:
         # Only create GUI ONCE in callback, so that it will only load when the plugin is started
         if self.first_start:
             self.first_start = False
-            self.dlg = TerratestDialog()
 
             model = QtGui.QStandardItemModel()
             self.dlg.filesView.setModel(model)
@@ -273,3 +285,88 @@ class Terratest:
             # Do something useful here - delete the line containing pass and
             # substitute with your code.
             pass
+
+    def calculate_is_e2(self):
+        selected_layer = self.layers_is[self.dlg_is.layerList.currentIndex()]
+        fields = selected_layer.fields()
+        index = fields.indexFromName('Evd')
+
+        if index == -1:
+            QMessageBox.information(self.dlg_is, 'ERROR', 'Wybrana przez Ciebie warstwa nie zawiera kolumny Evd')
+            return
+
+        if not fields[index].type() == QVariant.Double:
+            QMessageBox.information(self.dlg_is, 'ERROR', 'Kolumna w wybranej przez Ciebie warstwie nie jest typu '
+                                                          'Double')
+            return
+
+        soil = self.dlg_is.soilList.currentIndex()
+        granularity = self.dlg_is.granularityList.currentIndex()
+
+        layer_provider = selected_layer.dataProvider()
+
+        selected_layer.startEditing()
+
+        if self.dlg_is.isCheckbox.isChecked():
+            index_is = fields.indexFromName('Is')
+            if index_is == -1:
+                layer_provider.addAttributes([QgsField('Is', QVariant.Double)])
+                selected_layer.updateFields()
+                fields = selected_layer.fields()
+                index_is = fields.indexFromName('Is')
+
+            features = selected_layer.getFeatures()
+            for feature in features:
+                is_value = TerratestCalculate.calculate_is(TerratestCalculate.GRANULARITIES[granularity],
+                                                           TerratestCalculate.SOILS[soil],
+                                                           feature.attributes()[index])
+                selected_layer.changeAttributeValue(feature.id(), index_is, round(is_value, 3))
+
+        if self.dlg_is.e2Checkbox.isChecked():
+            index_e2 = fields.indexFromName('E2')
+            if index_e2 == -1:
+                layer_provider.addAttributes([QgsField('E2', QVariant.Double)])
+                selected_layer.updateFields()
+                fields = selected_layer.fields()
+                index_e2 = fields.indexFromName('E2')
+
+            features = selected_layer.getFeatures()
+            for feature in features:
+                e2_value = TerratestCalculate.calculate_e2(TerratestCalculate.GRANULARITIES[granularity],
+                                                           TerratestCalculate.SOILS[soil],
+                                                           feature.attributes()[index])
+                selected_layer.changeAttributeValue(feature.id(), index_e2, round(e2_value, 3))
+
+        selected_layer.commitChanges()
+
+        self.cancel_is()
+
+    def cancel_is(self):
+        self.dlg_is.layerList.clear()
+        self.dlg_is.close()
+
+    def run_is(self):
+        """Run method that performs all the real work"""
+
+        # Create the dialog with elements (after translation) and keep reference
+        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+        if self.first_start_is:
+            self.first_start_is = False
+
+            self.dlg_is.countButton.clicked.connect(self.calculate_is_e2)
+            self.dlg_is.cancelButton.clicked.connect(self.cancel_is)
+
+            self.dlg_is.soilList.addItems([soil for soil in TerratestCalculate.SOILS])
+            self.dlg_is.granularityList.addItems([granularity for granularity in TerratestCalculate.GRANULARITIES])
+
+        self.layers_is = [layer for layer in QgsProject.instance().mapLayers().values() if
+                          layer.type() == QgsVectorLayer.VectorLayer]
+        # Clear the contents of the comboBox from previous runs
+        self.dlg_is.layerList.clear()
+        # Populate the layerList with names of all the loaded layers
+        self.dlg_is.layerList.addItems([layer.name() for layer in self.layers_is])
+
+        # show the dialog
+        self.dlg_is.show()
+        # Run the dialog event loop
+        self.dlg_is.exec_()
