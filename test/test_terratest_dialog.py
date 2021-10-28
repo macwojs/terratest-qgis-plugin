@@ -16,7 +16,7 @@ import unittest
 
 from qgis.PyQt.QtWidgets import QDialogButtonBox, QDialog
 
-from terratest_dialog_base import TerratestDialog
+from interface.terratest_dialog_base import TerratestDialog
 
 from utilities import get_qgis_app
 QGIS_APP = get_qgis_app()

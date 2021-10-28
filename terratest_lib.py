@@ -395,3 +395,11 @@ class TerratestCalculate(object):
                 p2 = 5.91
 
         return p1 * evd + p2
+
+    @staticmethod
+    def calculate_id(granularity, soil, evd):
+        is_value = TerratestCalculate.calculate_is(granularity, soil, evd)
+        if is_value == 0:
+            return 0
+
+        return 5.50575 - 4.70115/is_value

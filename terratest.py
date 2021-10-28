@@ -30,12 +30,19 @@ from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 # Initialize Qt resources from file resources.py
-from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsMessageLog, QgsVectorLayer
+from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer
 
 # Import the code for the dialog
-from .terratest_dialog_base import TerratestDialog
-from .terratest_dialog_is import TerratestDialogIS
+from .interface.terratest_dialog_stats_show import TerratestDialogStatsShow
+from .interface.terratest_dialog_stats_choose import TerratestDialogStatsChoose
+from .interface.terratest_dialog_base import TerratestDialog
+from .interface.terratest_dialog_is import TerratestDialogIS
+
+# Terratest Library
 from .terratest_lib import TerratestRead as TerraLib, TerratestCalculate
+
+# Additional packages
+from numpy import mean, std, around
 
 
 class Terratest:
@@ -73,11 +80,15 @@ class Terratest:
         # Must be set in initGui() to survive plugin reloads
         self.first_start = None
         self.first_start_is = None
+        self.first_start_stats = None
 
         self.dlg = TerratestDialog()
         self.dlg_is = TerratestDialogIS()
+        self.dlg_stats = TerratestDialogStatsChoose()
+        self.dlg_stats_show = TerratestDialogStatsShow()
 
         self.layers_is = None
+        self.layers_stats = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -180,13 +191,20 @@ class Terratest:
 
         self.add_action(
             icon_path,
-            text=self.tr(u'Przelicz IS'),
+            text=self.tr(u'Wylicz IS/E2'),
             callback=self.run_is,
+            parent=self.iface.mainWindow())
+
+        self.add_action(
+            icon_path,
+            text=self.tr(u'Statystyki'),
+            callback=self.run_stats,
             parent=self.iface.mainWindow())
 
         # will be set False in run()
         self.first_start = True
         self.first_start_is = True
+        self.first_start_stats = True
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
@@ -286,13 +304,19 @@ class Terratest:
             # substitute with your code.
             pass
 
+    def field_must_exist(self, fields, field):
+        index = fields.indexFromName(field)
+        if index == -1:
+            QMessageBox.information(self.dlg_is, 'ERROR', 'Wybrana przez Ciebie warstwa nie zawiera kolumny Evd')
+
+        return index
+
     def calculate_is_e2(self):
         selected_layer = self.layers_is[self.dlg_is.layerList.currentIndex()]
         fields = selected_layer.fields()
-        index = fields.indexFromName('Evd')
 
+        index = self.field_must_exist(fields, 'Evd')
         if index == -1:
-            QMessageBox.information(self.dlg_is, 'ERROR', 'Wybrana przez Ciebie warstwa nie zawiera kolumny Evd')
             return
 
         if not fields[index].type() == QVariant.Double:
@@ -337,6 +361,21 @@ class Terratest:
                                                            feature.attributes()[index])
                 selected_layer.changeAttributeValue(feature.id(), index_e2, round(e2_value, 3))
 
+        if self.dlg_is.idCheckbox.isChecked():
+            index_id = fields.indexFromName('Id')
+            if index_id == -1:
+                layer_provider.addAttributes([QgsField('Id', QVariant.Double)])
+                selected_layer.updateFields()
+                fields = selected_layer.fields()
+                index_id = fields.indexFromName('Id')
+
+            features = selected_layer.getFeatures()
+            for feature in features:
+                id_value = TerratestCalculate.calculate_id(TerratestCalculate.GRANULARITIES[granularity],
+                                                           TerratestCalculate.SOILS[soil],
+                                                           feature.attributes()[index])
+                selected_layer.changeAttributeValue(feature.id(), index_id, round(id_value, 3))
+
         selected_layer.commitChanges()
 
         self.cancel_is()
@@ -370,3 +409,67 @@ class Terratest:
         self.dlg_is.show()
         # Run the dialog event loop
         self.dlg_is.exec_()
+
+    def cancel_stats(self):
+        self.dlg_stats.layerList.clear()
+        self.dlg_stats.close()
+
+    def calculate_stats(self):
+        selected_layer = self.layers_stats[self.dlg_stats.layerList.currentIndex()]
+        fields = selected_layer.fields()
+
+        index = self.field_must_exist(fields, 'Evd')
+        if index == -1:
+            return
+
+        evd = []
+        features = selected_layer.getFeatures()
+        for feature in features:
+            evd.append(feature.attributes()[index])
+
+        if self.dlg_stats.meanCheckbox.isChecked():
+            mean_value = around(mean(evd), 1)
+            self.dlg_stats_show.meanText.setText(str(mean_value))
+
+        if self.dlg_stats.stdDevCheckbox.isChecked():
+            std_value = around(std(evd), 3)
+            self.dlg_stats_show.stdDevText.setText(str(std_value))
+
+        if self.dlg_stats.coeffVariationCheckbox.isChecked():
+            coeffVar = around((std(evd)/mean(evd)) * 100, 1)
+            self.dlg_stats_show.coeffVariationText.setText(str(coeffVar) + '%')
+            if coeffVar < 30:
+                result = 'warstwa jednorodna'
+                color = 'green'
+            else:
+                result = 'warstwa niejednorodna'
+                color = 'red'
+
+            self.dlg_stats_show.resultText.setText(result)
+            self.dlg_stats_show.resultText.setStyleSheet('color: ' + color)
+
+        self.dlg_stats.close()
+        self.dlg_stats_show.show()
+
+    def run_stats(self):
+        """Run method that performs all the real work"""
+
+        # Create the dialog with elements (after translation) and keep reference
+        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
+        if self.first_start_stats:
+            self.first_start_stats = False
+
+            self.dlg_stats.countButton.clicked.connect(self.calculate_stats)
+            self.dlg_stats.cancelButton.clicked.connect(self.cancel_stats)
+
+        self.layers_stats = [layer for layer in QgsProject.instance().mapLayers().values() if
+                             layer.type() == QgsVectorLayer.VectorLayer]
+        # Clear the contents of the comboBox from previous runs
+        self.dlg_stats.layerList.clear()
+        # Populate the layerList with names of all the loaded layers
+        self.dlg_stats.layerList.addItems([layer.name() for layer in self.layers_stats])
+
+        # show the dialog
+        self.dlg_stats.show()
+        # Run the dialog event loop
+        self.dlg_stats.exec_()
