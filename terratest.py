@@ -370,10 +370,12 @@ class Terratest:
                 index_id = fields.indexFromName('Id')
 
             features = selected_layer.getFeatures()
+            id_type = self.dlg_is.idMethodList.currentIndex()
             for feature in features:
                 id_value = TerratestCalculate.calculate_id(TerratestCalculate.GRANULARITIES[granularity],
                                                            TerratestCalculate.SOILS[soil],
-                                                           feature.attributes()[index])
+                                                           feature.attributes()[index],
+                                                           TerratestCalculate.ID_METHOD[id_type])
                 selected_layer.changeAttributeValue(feature.id(), index_id, round(id_value, 3))
 
         selected_layer.commitChanges()
@@ -397,6 +399,7 @@ class Terratest:
 
             self.dlg_is.soilList.addItems([soil for soil in TerratestCalculate.SOILS])
             self.dlg_is.granularityList.addItems([granularity for granularity in TerratestCalculate.GRANULARITIES])
+            self.dlg_is.idMethodList.addItems([id_type for id_type in TerratestCalculate.ID_METHOD])
 
         self.layers_is = [layer for layer in QgsProject.instance().mapLayers().values() if
                           layer.type() == QgsVectorLayer.VectorLayer]

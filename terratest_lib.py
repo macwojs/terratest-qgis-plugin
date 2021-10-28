@@ -304,6 +304,10 @@ class TerratestCalculate(object):
     GRANULARITY_CONTINUOUS = 'ciągłe'
     GRANULARITY_DISCONTINUOUS = 'nieciągłe'
 
+    ID_GDDKIA = 'Według GDDKiA'
+    ID_PISARCZYK_FINE = 'Według Pisarczyka - drobnoziarnisty'
+    ID_PISARCZYK_COARSE = 'Według Pisarczyka - gruboziarnisty'
+
     SOILS = [
         SAND_FINE,
         SAND_MEDIUM,
@@ -315,6 +319,12 @@ class TerratestCalculate(object):
     GRANULARITIES = [
         GRANULARITY_CONTINUOUS,
         GRANULARITY_DISCONTINUOUS
+    ]
+
+    ID_METHOD = [
+        ID_GDDKIA,
+        ID_PISARCZYK_FINE,
+        ID_PISARCZYK_COARSE
     ]
 
     @staticmethod
@@ -397,9 +407,16 @@ class TerratestCalculate(object):
         return p1 * evd + p2
 
     @staticmethod
-    def calculate_id(granularity, soil, evd):
+    def calculate_id(granularity, soil, evd, id_type):
         is_value = TerratestCalculate.calculate_is(granularity, soil, evd)
-        if is_value == 0:
-            return 0
 
-        return 5.50575 - 4.70115/is_value
+        result = 0
+
+        if id_type == TerratestCalculate.ID_GDDKIA and is_value != 0:
+            result = 5.50575 - 4.70115 / is_value
+        elif id_type == TerratestCalculate.ID_PISARCZYK_FINE:
+            result = (is_value - 0.855) / 0.165
+        elif id_type == TerratestCalculate.ID_PISARCZYK_COARSE:
+            result = (is_value - 0.78) / 0.33
+
+        return result
