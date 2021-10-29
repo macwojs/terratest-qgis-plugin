@@ -62,7 +62,7 @@ class TerratestRead(object):
             return self.__serial_number
 
     @property
-    def hammer_height(self):
+    def hammer_weight(self):
         if self.__hammer_weight is None:
             self.__hammer_weight = self.__data[14]
 
@@ -272,6 +272,7 @@ class TerratestRead(object):
         data = [
             self.name,
             self.serial_number,
+            self.hammer_weight,
             QtCore.QDate.fromString(self.calibration_date.strftime("%d.%m.%Y"), "dd.MM.yyyy"),
             QtCore.QDateTime.fromString(self.test_datetime.strftime("%d.%m.%Y %H:%M:%S"),
                                         "dd.MM.yyyy hh:mm:ss"),

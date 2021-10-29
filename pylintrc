@@ -131,7 +131,7 @@ docstring-min-length=-1
 [MISCELLANEOUS]
 
 # List of note tags to take in consideration, separated by a comma.
-notes=FIXME,XXX,TODO
+notes=TODO
 
 
 [TYPECHECK]

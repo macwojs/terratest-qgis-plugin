@@ -1,3 +1,5 @@
 .idea
 test_data
 test.py
+DejaVuSansCondensed.*
+!DejaVuSansCondensed.ttf
