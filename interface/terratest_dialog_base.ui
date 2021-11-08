@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>554</width>
+    <width>706</width>
     <height>380</height>
    </rect>
   </property>
@@ -16,8 +16,8 @@
   <widget class="QPushButton" name="openButton">
    <property name="geometry">
     <rect>
-     <x>407</x>
-     <y>20</y>
+     <x>317</x>
+     <y>10</y>
      <width>121</width>
      <height>34</height>
     </rect>
@@ -29,8 +29,8 @@
   <widget class="QPushButton" name="generateButton">
    <property name="geometry">
     <rect>
-     <x>270</x>
-     <y>330</y>
+     <x>180</x>
+     <y>320</y>
      <width>131</width>
      <height>34</height>
     </rect>
@@ -42,8 +42,8 @@
   <widget class="QPushButton" name="cancelButton">
    <property name="geometry">
     <rect>
-     <x>407</x>
-     <y>330</y>
+     <x>317</x>
+     <y>320</y>
      <width>131</width>
      <height>34</height>
     </rect>
@@ -55,9 +55,9 @@
   <widget class="QListView" name="filesView">
    <property name="geometry">
     <rect>
-     <x>20</x>
-     <y>20</y>
-     <width>381</width>
+     <x>10</x>
+     <y>10</y>
+     <width>301</width>
      <height>301</height>
     </rect>
    </property>
@@ -65,27 +65,40 @@
   <widget class="QPushButton" name="deleteAllButton">
    <property name="geometry">
     <rect>
-     <x>407</x>
-     <y>250</y>
+     <x>317</x>
+     <y>240</y>
      <width>131</width>
      <height>34</height>
     </rect>
    </property>
    <property name="text">
-    <string>Usuń wsdzystkie</string>
+    <string>Usuń wszystkie</string>
    </property>
   </widget>
   <widget class="QPushButton" name="deleteButton">
    <property name="geometry">
     <rect>
-     <x>407</x>
-     <y>290</y>
+     <x>317</x>
+     <y>280</y>
      <width>131</width>
      <height>34</height>
     </rect>
    </property>
    <property name="text">
     <string>Usuń</string>
+   </property>
+  </widget>
+  <widget class="QTextEdit" name="detailsText">
+   <property name="geometry">
+    <rect>
+     <x>460</x>
+     <y>10</y>
+     <width>231</width>
+     <height>341</height>
+    </rect>
+   </property>
+   <property name="readOnly">
+    <bool>true</bool>
    </property>
   </widget>
  </widget>

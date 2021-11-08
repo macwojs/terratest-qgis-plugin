@@ -236,7 +236,9 @@ class Terratest:
         files, selected_filter = QFileDialog.getOpenFileNames(self.dlg, "Select terratest files")
 
         for i in files:
-            item = QtGui.QStandardItem(str(i))
+            item = QtGui.QStandardItem(os.path.basename(i))
+            terratest_data = TerraLib(i)
+            item.setData(terratest_data)
             self.dlg.filesView.model().appendRow(item)
 
     def cancel(self):
@@ -274,14 +276,13 @@ class Terratest:
 
             lp = 1
             for row in range(model.rowCount()):
-                index = model.takeItem(row)
+                item = model.takeItem(row).data()
 
-                data = TerraLib(index.text())
-                cords = data.coordinates_g()
+                cords = item.coordinates_g()
 
                 fet = QgsFeature()
                 fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(cords[1], cords[0])))
-                fet.setAttributes([lp] + data.atr_for_layer())
+                fet.setAttributes([lp] + item.atr_for_layer())
                 pr.addFeatures([fet])
 
                 lp = lp + 1
@@ -289,6 +290,14 @@ class Terratest:
                 vl.updateExtents()
 
         self.cancel()
+
+    def show_details(self, current, previous):
+        item = self.dlg.filesView.model().itemFromIndex(current).data()
+        text = "Nazwa: " + item.name + "\n" \
+               + "Data: " + item.test_datetime.strftime("%d.%m.%Y") + "\n" \
+               + "Godzina: " + item.test_datetime.strftime("%H:%M:%S") + "\n" \
+               + "Evd: " + "{:.3f}".format(item.evd)
+        self.dlg.detailsText.setPlainText(text)
 
     def delete(self):
         selected_list = self.dlg.filesView.selectedIndexes()
@@ -309,13 +318,17 @@ class Terratest:
 
             model = QtGui.QStandardItemModel()
             self.dlg.filesView.setModel(model)
+            # self.dlg.filesView.setSelectionMode(QAbstractItemView.ExtendedSelection)
             self.dlg.filesView.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+            self.dlg.filesView.selectionModel().currentChanged.connect(self.show_details)
 
             self.dlg.openButton.clicked.connect(self.choose_files)
             self.dlg.cancelButton.clicked.connect(self.cancel)
             self.dlg.generateButton.clicked.connect(self.generate)
             self.dlg.deleteButton.clicked.connect(self.delete)
             self.dlg.deleteAllButton.clicked.connect(self.delete_all)
+
 
         # show the dialog
         self.dlg.show()
