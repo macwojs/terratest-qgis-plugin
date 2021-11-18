@@ -25,6 +25,7 @@ import os.path
 import imghdr
 
 import PIL.Image
+from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QMessageBox
 from qgis.PyQt import QtGui
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
@@ -33,7 +34,9 @@ from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 # Initialize Qt resources from file resources.py
 from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer, QgsLayoutExporter, \
-    QgsMessageLog, QgsApplication
+    QgsMessageLog, QgsApplication, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes, \
+    QgsLayoutItemLabel, QgsLayoutItemPage, QgsLayoutItemScaleBar, QgsPalLayerSettings, QgsVectorLayerSimpleLabeling, \
+    QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture
 
 # Import the code for the dialog
 from .interface.terratest_dialog_report import TerratestDialogReport
@@ -214,6 +217,12 @@ class Terratest:
 
         self.add_action(
             icon_path,
+            text=self.tr(u'Domyślny szablon wydruku'),
+            callback=self.run_print_layout,
+            parent=self.iface.mainWindow())
+
+        self.add_action(
+            icon_path,
             text=self.tr(u'Report'),
             callback=self.run_report,
             parent=self.iface.mainWindow())
@@ -251,7 +260,7 @@ class Terratest:
             vl = self.iface.addVectorLayer("Point?crs=epsg:4326", "terratest_points", "memory")
             pr = vl.dataProvider()
             pr.addAttributes([
-                QgsField("Lp", QVariant.Int),
+                QgsField("Pkt", QVariant.Int),
                 QgsField("name", QVariant.String),
                 QgsField("serial_number", QVariant.String),
                 QgsField("hammer_weight", QVariant.String),
@@ -274,10 +283,14 @@ class Terratest:
             ])
             vl.updateFields()
 
-            lp = 1
+            data = []
             for row in range(model.rowCount()):
                 item = model.takeItem(row).data()
+                data.append(item)
 
+            lp = 1
+            # TODO sortowanie po dacie
+            for item in data:
                 cords = item.coordinates_g()
 
                 fet = QgsFeature()
@@ -288,6 +301,31 @@ class Terratest:
                 lp = lp + 1
 
                 vl.updateExtents()
+
+            # LABEL FOR LAYER
+            pal_layer = QgsPalLayerSettings()
+            pal_layer.fieldName = "Pkt"
+
+            # Text format and buffer
+            text_format = QgsTextFormat()
+            text_format.setSize(12)
+            buffer_settings = QgsTextBufferSettings()
+            buffer_settings.setEnabled(True)
+            buffer_settings.setSize(1)
+            buffer_settings.setColor(QColor("white"))
+            text_format.setBuffer(buffer_settings)
+            pal_layer.setFormat(text_format)
+
+            # Label offset
+            pal_layer.placement = 1
+            pal_layer.quadOffset = 4
+            pal_layer.xOffset = 2.0
+            pal_layer.yOffset = -3.0
+
+            labeler = QgsVectorLayerSimpleLabeling(pal_layer)
+            vl.setLabeling(labeler)
+            vl.setLabelsEnabled(True)
+            vl.triggerRepaint()
 
         self.cancel()
 
@@ -643,7 +681,7 @@ class Terratest:
         if self.dlg_report.resultCheckbox.isChecked():
             features = selected_layer.getFeatures()
             columns_name = [
-                'Lp',
+                'Pkt',
                 'Data',
                 'Osiadanie\nS1\n[mm]',
                 'Osiadanie\nS2\n[mm]',
@@ -680,7 +718,7 @@ class Terratest:
                 header_height / 2
             ]
             keys = [
-                'Lp',
+                'Pkt',
                 'date',
                 's1max',
                 's2max',
@@ -867,3 +905,72 @@ class Terratest:
         self.dlg_report.show()
         # Run the dialog event loop
         self.dlg_report.exec_()
+
+    def run_print_layout(self):
+        name = "Terratest default"
+        manager = QgsProject.instance().layoutManager()
+        # for layer in manager.printLayouts():
+        #     if layer.name() == name:
+        #         QMessageBox.information(self.dlg_is, 'ERROR', 'Już istnieje domyślny szablon wydruku (Terratest '
+        #                                                       'default)')
+        #         return
+
+        layouts_list = manager.printLayouts()
+        for layout in layouts_list:
+            if layout.name() == name:
+                manager.removeLayout(layout)
+
+        project = QgsProject.instance()
+        layout = QgsPrintLayout(project)
+        layout.initializeDefaults()
+
+        # Change for portrait
+        pc = layout.pageCollection()
+        pc.page(0).setPageSize('A4', QgsLayoutItemPage.Orientation.Portrait)
+
+        layout.setName(name)
+        project.layoutManager().addLayout(layout)
+
+        map = QgsLayoutItemMap(layout)
+        map.setRect(20, 20, 20, 20)
+        canvas = self.iface.mapCanvas()
+        map.setExtent(canvas.extent())  # sets map extent to current map canvas
+        map.setFrameEnabled(True)
+        layout.addLayoutItem(map)
+        # Move & Resize
+        map.attemptMove(QgsLayoutPoint(10, 40, QgsUnitTypes.LayoutMillimeters))
+        map.attemptResize(QgsLayoutSize(190, 220, QgsUnitTypes.LayoutMillimeters))
+
+        title = QgsLayoutItemLabel(layout)
+        title.setText("Mapa lokalizacji punktów pomiarowych")
+        title.setFont(QFont("DejaVu Sans", 24))
+        title.adjustSizeToText()
+        layout.addLayoutItem(title)
+        title.attemptMove(QgsLayoutPoint(21, 27, QgsUnitTypes.LayoutMillimeters))
+
+        att_text = QgsLayoutItemLabel(layout)
+        att_text.setText("Zal. ")
+        att_text.setFont(QFont("DejaVu Sans", 18))
+        att_text.adjustSizeToText()
+        layout.addLayoutItem(att_text)
+        att_text.attemptMove(QgsLayoutPoint(160, 15, QgsUnitTypes.LayoutMillimeters))
+
+        scalebar = QgsLayoutItemScaleBar(layout)
+        scalebar.setLinkedMap(map)
+        scalebar.setStyle('Single Box')
+        scalebar.setFont(QFont("DejaVu Sans", 18))
+        scalebar.applyDefaultSize()
+        scalebar.setSegmentSizeMode(1)
+        scalebar.setNumberOfSegmentsLeft(0)
+        scalebar.setMaximumBarWidth(210/3)
+        scalebar.update()
+        layout.addLayoutItem(scalebar)
+        scalebar.attemptMove(QgsLayoutPoint(20, 265, QgsUnitTypes.LayoutMillimeters))
+
+        arrow = QgsLayoutItemPicture(layout)
+        arrow.setPicturePath(os.path.join(os.path.dirname(__file__), 'north_arrow.svg'))
+        layout.addLayoutItem(arrow)
+        arrow.attemptMove(QgsLayoutPoint(15, 45, QgsUnitTypes.LayoutMillimeters))
+        arrow.attemptResize(QgsLayoutSize(30, 30, QgsUnitTypes.LayoutMillimeters))
+
+        QMessageBox.information(self.dlg_is, 'SUCCESS', 'Poprawnie dodano szablon wydruku.')
