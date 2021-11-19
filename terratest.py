@@ -42,6 +42,7 @@ from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject
     QgsLayoutItemLabel, QgsLayoutItemPage, QgsLayoutItemScaleBar, QgsPalLayerSettings, QgsVectorLayerSimpleLabeling, \
     QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture, QgsRasterLayer
 
+from .pdf import PDF
 from .interface.terratest_dialog_base import TerratestDialog
 from .interface.terratest_dialog_is import TerratestDialogIS
 # Import the code for the dialog
@@ -594,101 +595,18 @@ class Terratest:
         if output_file == '' or output_file == None:
             QMessageBox.information(self.dlg_report, 'ERROR', 'Musisz określić miejsce zapisu raportu')
             return
-        # output_file = '/home/maciek/Dokumenty/Inzynierka/Plugin/terratest/test_data/a.pdf'
 
-        head, tail = os.path.split(output_file)  # head is path, tail is file name
-
-        # TODO przerzuć do klasy, bo trzeba nadpisać przechodzenie do nowej strony
-        pdf = FPDF(format='A4')
-        pdf.add_page()
-
-        pdf.add_font('DejaVu', '', os.path.join(os.path.dirname(__file__), 'DejaVuSansCondensed.ttf'), uni=True)
-
-        # Add logo
-        image_file = self.dlg_report.imageFileText.text()
-        if image_file != '' and image_file != None:
-            if not imghdr.what(image_file):
-                QMessageBox.information(self.dlg_report, 'ERROR', 'Logo musi być grafiką rastrową')
-                return
-
-            image = PIL.Image.open(image_file)
-            width, height = image.size
-            image.close()
-            if height / width >= 3 / 7:
-                pdf.image(image_file, x=20, y=30, h=30)
-            else:
-                pdf.image(image_file, x=20, y=30, w=70)
-
-        y = 15
-        # Date and place
-        pdf.set_xy(20, y)
-        pdf.set_font('DejaVu', '', 11)
-        text = self.dlg_report.cityLine.text() + ', ' + self.dlg_report.dateLine.text()
-        pdf.cell(w=60, h=8, align='L', txt=text, border=0)
-
-        # attachment
-        pdf.set_xy(160, y)
-        pdf.set_font('DejaVu', '', 11)
-        text = 'Zal. ' + self.dlg_report.attachLine.text()
-        pdf.cell(w=30, h=8, align='R', txt=text, border=0)
-
-        y = y + 10
-        pdf.set_xy(90, y)
-        pdf.set_font('DejaVu', '', 16)
-        pdf.cell(w=120, h=8, align='C', txt="Protokół badania", border=0)
-
-        y = y + 8
-        pdf.set_xy(90, y)
-        pdf.set_font('DejaVu', '', 14)
-        pdf.cell(w=120, h=5, align='C', txt="dynamicznego modułu odkształcenia Evd", border=0)
-
-        pdf.set_font('DejaVu', '', 12)
-
-        selected_layer = self.layers_report[self.dlg_report.layerList.currentIndex()]
-        fields = selected_layer.fields()
-        features = selected_layer.getFeatures()
-
-        y = y + 12
-        elements = [
-            'Producent',
-            'Numer seryjny',
-            'Waga młota'
-        ]
-
-        feature = features.__next__()
-        elements_values = [
-            'Terratest GmbH',
-        ]
-
-        if fields.indexFromName('serial_number') != -1:
-            elements_values.append(feature['serial_number'])
+        pdf = PDF(format='A4')
+        pdf.init()
+        pdf.report_pdf(self.dlg_report, self.layers_report[self.dlg_report.layerList.currentIndex()])
+        if self.dlg_report.mapCheckbox.isChecked():
+            map_name = self.dlg_report.mapsList.currentText()
         else:
-            elements_values.append('')
+            map_name = None
+        pdf.save(output_file, map_name)
 
-        if fields.indexFromName('hammer_weight') != -1:
-            elements_values.append(feature['hammer_weight'] + 'kg')
-        else:
-            elements_values.append('')
-
-        for i in range(len(elements)):
-            pdf.set_xy(90, y)
-            pdf.write(5, elements[i] + ': ' + elements_values[i])
-            y = y + 5
-
-        # Dane badania
-        elements = [
-            'Obiekt',
-            'Lokalizacja',
-            'Zleceniodawca',
-            'Pogoda',
-            'Warstwa',
-            'Badany materiał',
-            'Grunt równoważny',
-            'Uziarnienie',
-            'Badanie wykonał',
-            'Opracował'
-        ]
-        element_values = [
+        # Zapisywanie danych z formularza na przyszlosc
+        np_array = array([
             self.dlg_report.testObjectLine.text(),
             self.dlg_report.locationLine.text(),
             self.dlg_report.buyerLine.text(),
@@ -698,181 +616,11 @@ class Terratest:
             self.dlg_report.soilEqualLine.text(),
             self.dlg_report.granularityLine.text(),
             self.dlg_report.testerLine.text(),
-            self.dlg_report.creatorLine.text()
-        ]
-        y = y + 5  # distance 10 from last element
-        y_temp = y
-        for i in range(len(elements)):
-            pdf.set_xy(40, y)
-            pdf.cell(w=20, h=5, align='R', txt=elements[i] + ':', border=0)
-            pdf.cell(w=110, h=5, align='C', txt=element_values[i], border=0)
-            y = y + 6
-            pdf.line(60, y - 0.5, 185, y - 0.5)
-        pdf.rect(15, y_temp - 2, 180, y - y_temp + 5)
-
-        # Wyniki badania
-        if self.dlg_report.resultCheckbox.isChecked():
-            features = selected_layer.getFeatures()
-            columns_name = [
-                'Pkt',
-                'Data',
-                'Osiadanie\nS1\n[mm]',
-                'Osiadanie\nS2\n[mm]',
-                'Osiadanie\nS3\n[mm]',
-                'Osiadanie\nśrednie\n[mm]',
-                'Evd\n[MPa]',
-                'E2\n[MPa]',
-                'Is\n[-]',
-                'Id\n[-]'
-            ]
-            columns_width = [
-                8,
-                40,
-                20,
-                20,
-                20,
-                20,
-                15,
-                20,
-                15,
-                15
-            ]
-            header_height = 15
-            header_heights = [
-                header_height,
-                header_height,
-                header_height / 3,
-                header_height / 3,
-                header_height / 3,
-                header_height / 3,
-                header_height / 2,
-                header_height / 2,
-                header_height / 2,
-                header_height / 2
-            ]
-            keys = [
-                'Pkt',
-                'date',
-                's1max',
-                's2max',
-                's3max',
-                'average_s',
-                'Evd',
-                'E2',
-                'Is',
-                'Id'
-            ]
-
-            indexes = {}
-
-            total_width = 0
-            for i in range(len(keys)):
-                index = fields.indexFromName(keys[i])
-                indexes[keys[i]] = [index, columns_name[i], columns_width[i], header_heights[i]]
-                if index != -1:
-                    total_width = total_width + columns_width[i]
-
-            # Center table
-            x = (210 - total_width) / 2
-            x_temp = x
-
-            # Header
-            y = y + 5
-            pdf.set_xy(x, y)
-            pdf.set_font('DejaVu', '', 11)
-            pdf.set_fill_color(240)
-            for key, value in indexes.items():
-                if value[0] != -1:
-                    pdf.multi_cell(value[2], value[3], value[1], 1, align='C', fill=True)
-                x_temp = x_temp + value[2]
-                pdf.set_xy(x_temp, y)
-
-            y = y + header_height
-            pdf.set_font('DejaVu', '', 10)
-            for feature in features:
-                pdf.set_xy(x, y)
-                for key, value in indexes.items():
-                    if value[0] != -1:
-                        data = feature.attributes()[value[0]]
-                        if key == 'date':
-                            data = data.toString('dd.MM.yyyy  hh:mm')
-                        if key == 's1max' or key == 's2max' or key == 's3max' or key == 'average_s':
-                            data = '%.3f' % round(data, 3)
-                        if key == 'Evd' or key == 'E2':
-                            data = '%.1f' % round(data, 1)
-                        if key == 'Is' or key == 'Id':
-                            data = '%.2f' % round(data, 2)
-
-                        pdf.cell(value[2], 5, str(data), 1, align='C')
-
-                y = y + 5
-
-        # Statystyki
-        if self.dlg_report.statsCheckbox.isChecked():
-            features = selected_layer.getFeatures()
-            evd_index = self.field_must_exist(fields, 'Evd')
-            if evd_index == -1:
-                return
-            evd = []
-            for feature in features:
-                evd.append(feature.attributes()[evd_index])
-
-            y = y + 5
-            x = 30
-            pdf.set_font('DejaVu', '', 12)
-
-            mean_value = mean(evd)
-            pdf.set_xy(x, y)
-            pdf.cell(w=60, h=10, align='R', txt="Średnia arytmetyczna Evd:", border=0)
-            pdf.cell(w=20, h=10, align='C', txt=str(around(mean_value, 1)), border=0)
-            pdf.cell(w=20, h=10, align='C', txt="[MPa]", border=0)
-
-            std_value = std(evd)
-            y = y + 10
-            pdf.set_xy(x, y)
-            pdf.cell(w=60, h=10, align='R', txt="Odchylenie standardowe Evd:", border=0)
-            pdf.cell(w=20, h=10, align='C', txt=str(around(std_value, 3)), border=0)
-            pdf.cell(w=20, h=10, align='C', txt="[MPa]", border=0)
-
-            coeff_var = (std_value / mean_value) * 100
-            y = y + 10
-            pdf.set_xy(x, y)
-            pdf.cell(w=60, h=10, align='R', txt="Współczynnik zmienności Evd:", border=0)
-            pdf.cell(w=20, h=10, align='C', txt=str(around(coeff_var, 3)), border=0)
-            pdf.cell(w=20, h=10, align='C', txt="[%]", border=0)
-
-            y = y + 10
-            pdf.set_xy(x, y)
-            pdf.cell(w=60, h=10, align='R', txt="Kryterium jakości:", border=0)
-            if coeff_var < 30:
-                text = 'Spełnione - warstwa jednorodna'
-                pdf.set_text_color(0, 255, 0)
-            else:
-                text = 'Niespełnione - warstwa niejednorodna'
-                pdf.set_text_color(255, 0, 0)
-            pdf.cell(w=80, h=10, align='C', txt=text, border=0)
-
-        pdf.output(output_file, 'F')
-
-        # Generowanie mapy
-        if self.dlg_report.mapCheckbox.isChecked():
-            manager = QgsProject.instance().layoutManager()
-            layout = manager.layoutByName(self.dlg_report.mapsList.currentText())
-            exporter = QgsLayoutExporter(layout)
-            temp_path = os.path.join(head, 'temp_asdasdasdasd.pdf')
-            exporter.exportToPdf(temp_path, QgsLayoutExporter.PdfExportSettings())
-
-            merge_file = PdfFileMerger()
-            merge_file.append(PdfFileReader(output_file))
-            merge_file.append(PdfFileReader(temp_path))
-            merge_file.write(output_file)
-            os.remove(temp_path)
-
-        # Zapisywanie danych z formularza na przyszlosc
-        np_array = array(element_values)
-        np_array = append(np_array, self.dlg_report.cityLine.text())
-        np_array = append(np_array, self.dlg_report.dateLine.text())
-        np_array = append(np_array, self.dlg_report.attachLine.text())
+            self.dlg_report.creatorLine.text(),
+            self.dlg_report.cityLine.text(),
+            self.dlg_report.dateLine.text(),
+            self.dlg_report.attachLine.text()
+        ])
         settings_path = os.path.join(self.settings_path, 'report_form.npy')
         save(settings_path, np_array)
 
