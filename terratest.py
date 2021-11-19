@@ -40,7 +40,7 @@ from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer, QgsLayoutExporter, \
     QgsApplication, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes, \
     QgsLayoutItemLabel, QgsLayoutItemPage, QgsLayoutItemScaleBar, QgsPalLayerSettings, QgsVectorLayerSimpleLabeling, \
-    QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture, QgsRasterLayer, QgsMessageLog
+    QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture, QgsRasterLayer
 
 from .interface.terratest_dialog_base import TerratestDialog
 from .interface.terratest_dialog_is import TerratestDialogIS
@@ -312,7 +312,7 @@ class Terratest:
                 data.append(item)
 
             lp = 1
-            # TODO sortowanie po dacie
+            data.sort(key=lambda x: x.test_datetime)
             for item in data:
                 cords = item.coordinates_g()
 
