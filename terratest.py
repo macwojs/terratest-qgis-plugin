@@ -21,12 +21,16 @@
  *                                                                         *
  ***************************************************************************/
 """
-import os.path
 import imghdr
+import os.path
 
 import PIL.Image
+from PyPDF2 import PdfFileMerger, PdfFileReader
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtWidgets import QMessageBox
+from fpdf import FPDF
+# Additional packages
+from numpy import mean, std, around, array, save, load, append
 from qgis.PyQt import QtGui
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
 from qgis.PyQt.QtGui import QIcon
@@ -34,24 +38,18 @@ from qgis.PyQt.QtWidgets import QAction
 from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
 # Initialize Qt resources from file resources.py
 from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer, QgsLayoutExporter, \
-    QgsMessageLog, QgsApplication, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes, \
+    QgsApplication, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes, \
     QgsLayoutItemLabel, QgsLayoutItemPage, QgsLayoutItemScaleBar, QgsPalLayerSettings, QgsVectorLayerSimpleLabeling, \
-    QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture
+    QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture, QgsRasterLayer, QgsMessageLog
 
-# Import the code for the dialog
-from .interface.terratest_dialog_report import TerratestDialogReport
-from .interface.terratest_dialog_stats_show import TerratestDialogStatsShow
-from .interface.terratest_dialog_stats_choose import TerratestDialogStatsChoose
 from .interface.terratest_dialog_base import TerratestDialog
 from .interface.terratest_dialog_is import TerratestDialogIS
-
+# Import the code for the dialog
+from .interface.terratest_dialog_report import TerratestDialogReport
+from .interface.terratest_dialog_stats_choose import TerratestDialogStatsChoose
+from .interface.terratest_dialog_stats_show import TerratestDialogStatsShow
 # Terratest Library
 from .terratest_lib import TerratestRead as TerraLib, TerratestCalculate
-
-# Additional packages
-from numpy import mean, std, around, array, save, load, append
-from fpdf import FPDF
-from PyPDF2 import PdfFileMerger, PdfFileReader
 
 
 class Terratest:
@@ -103,6 +101,25 @@ class Terratest:
         self.layers_report = None
 
         self.settings_path = QgsApplication.qgisSettingsDirPath()
+
+        self.wms_maps = [
+            {
+                "url": "type=xyz&url=https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png&zmax=19&zmin=0&crs=EPSG3857",
+                "name": "OpenStreetMap"
+            },
+            {
+                "url": "contextualWMSLegend=0&crs=EPSG:4326&dpiMode=7&featureCount=10&format=image/png8&layers=RZab&layers=TPrz&layers=SOd2&layers=SOd1&layers=GNu2&layers=GNu1&layers=TKa2&layers=TKa1&layers=TPi2&layers=TPi1&layers=UTrw&layers=TLes&layers=RKr&layers=RTr&layers=ku7&layers=ku6&layers=ku5&layers=ku4&layers=ku3&layers=ku2&layers=ku1&layers=Mo&layers=Szu&layers=Pl3&layers=Pl2&layers=Pl1&layers=kanOkr&layers=rzOk&layers=row&layers=kan&layers=rz&layers=RowEt&layers=kanEt&layers=rzEt&layers=WPow&layers=LBrzN&layers=LBrz&layers=WPowEt&layers=GrPol&layers=Rez&layers=GrPK&layers=GrPN&layers=GrDz&layers=GrGm&layers=GrPo&layers=GrWo&layers=GrPns&layers=PRur&layers=ZbTA&layers=BudCm&layers=TerCm&layers=BudSp&layers=Szkl&layers=Kap&layers=SwNch&layers=SwCh&layers=BudZr&layers=BudGo&layers=BudPWy&layers=BudP2&layers=BudP1&layers=BudUWy&layers=BudU&layers=BudMWy&layers=BudMJ&layers=BudMW&layers=Bzn&layers=BHydA&layers=BHydL&layers=wyk&layers=wa6&layers=wa5&layers=wa4&layers=wa3&layers=wa2&layers=wa1&layers=IUTA&layers=ObOrA&layers=ObPL&layers=Prom&layers=PomL&layers=MurH&layers=PerA&layers=PerL&layers=Tryb&layers=UTrL&layers=LTra&layers=LKNc&layers=LKBu&layers=LKWs&layers=TSt&layers=LKNelJ&layers=LKNelD&layers=LKNelW&layers=LKZelJ&layers=LKZelD&layers=LKZelW&layers=Scz&layers=Al&layers=AlEt&layers=Sch2&layers=Sch1&layers=DrDGr&layers=DrLGr&layers=JDrLNUt&layers=JDLNTw&layers=JDrZTw&layers=JDrG&layers=DrEk&layers=JDrEk&layers=AuBud&layers=JAu&layers=NazDr&layers=NrDr&layers=Umo&layers=PPdz&layers=Prze&layers=TunK&layers=TunD&layers=Klad&layers=MosK&layers=MosD&layers=UTrP&layers=ObKom&layers=InUTP&layers=ZbTP&layers=NazUl&layers=ObOrP&layers=WyBT&layers=LTel&layers=LEle&layers=ObPP&layers=DrzPomP&layers=e13&layers=e12&layers=e11&layers=e10&layers=e9&layers=e8&layers=e7&layers=e6&layers=e5&layers=e4&layers=e3&layers=e2&layers=e1&layers=s19&layers=s18&layers=s17&layers=s16&layers=s15&layers=s14&layers=s13&layers=s12&layers=s11&layers=s10&layers=s9&layers=s8&layers=s7&layers=s6&layers=s5&layers=s4&layers=s3&layers=s2&layers=s1&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&url=http://mapy.geoportal.gov.pl/wss/service/pub/guest/kompozycja_BDOT10k_WMS/MapServer/WMSServer",
+                "name": "Geoportal - BDOT10K"
+            },
+            {
+                "url": "contextualWMSLegend=0&crs=EPSG:4326&dpiMode=7&featureCount=10&format=image/png8&layers=Raster&styles&url=http://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer",
+                "name": "Geoportal - Topo"
+            },
+            {
+                "url": "type=xyz&url=http://mt0.google.com/vt/lyrs%3Ds%26hl%3Den%26x%3D%7Bx%7D%26y%3D%7By%7D%26z%3D%7Bz%7D&zmax=18&zmin=0",
+                "name": "Google - Satelite"
+            },
+        ]
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -255,6 +272,12 @@ class Terratest:
         self.dlg.close()
 
     def generate(self):
+        if self.dlg.wmsCheckbox.isChecked():
+            wms_index = self.dlg.wmsList.currentIndex()
+            map = self.wms_maps[wms_index]
+            wms_layer = QgsRasterLayer(map["url"], map["name"], "wms")
+            QgsProject.instance().addMapLayer(wms_layer)
+
         model = self.dlg.filesView.model()
         if model.rowCount():
             vl = self.iface.addVectorLayer("Point?crs=epsg:4326", "terratest_points", "memory")
@@ -327,6 +350,14 @@ class Terratest:
             vl.setLabelsEnabled(True)
             vl.triggerRepaint()
 
+            # FIXME Zoom to loaded layer
+            # canvas = self.iface.mapCanvas()
+            # vl.selectAll()
+            # canvas.zoomToSelected()
+            # self.iface.actionZoomToSelected().trigger()
+            # vl.removeSelection()
+            # canvas.refresh()
+
         self.cancel()
 
     def show_details(self, current, previous):
@@ -367,6 +398,7 @@ class Terratest:
             self.dlg.deleteButton.clicked.connect(self.delete)
             self.dlg.deleteAllButton.clicked.connect(self.delete_all)
 
+            self.dlg.wmsList.addItems([map["name"] for map in self.wms_maps])
 
         # show the dialog
         self.dlg.show()
@@ -566,6 +598,7 @@ class Terratest:
 
         head, tail = os.path.split(output_file)  # head is path, tail is file name
 
+        # TODO przerzuć do klasy, bo trzeba nadpisać przechodzenie do nowej strony
         pdf = FPDF(format='A4')
         pdf.add_page()
 
@@ -962,7 +995,7 @@ class Terratest:
         scalebar.applyDefaultSize()
         scalebar.setSegmentSizeMode(1)
         scalebar.setNumberOfSegmentsLeft(0)
-        scalebar.setMaximumBarWidth(210/3)
+        scalebar.setMaximumBarWidth(210 / 3)
         scalebar.update()
         layout.addLayoutItem(scalebar)
         scalebar.attemptMove(QgsLayoutPoint(20, 265, QgsUnitTypes.LayoutMillimeters))
