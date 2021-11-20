@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 
-from PyQt5 import QtCore
+from qgis.PyQt import QtCore
 
 
 class TerratestRead(object):

@@ -1,13 +1,14 @@
 import imghdr
+import os.path
 
 import PIL.Image
 from PyPDF2 import PdfFileMerger, PdfFileReader
 from PyQt5.QtWidgets import QMessageBox
 from fpdf import FPDF
-import os.path
-from numpy import mean, std, around, array, save, load, append
-
+from numpy import mean, std, around
 from qgis._core import QgsProject, QgsLayoutExporter, QgsMessageLog
+
+from ...helpers import field_must_exist
 
 
 class PDF(FPDF):
@@ -21,17 +22,10 @@ class PDF(FPDF):
         self.y_own = 20
         return super().accept_page_break()
 
-    def field_must_exist(self, fields, field, dlg):
-        index = fields.indexFromName(field)
-        if index == -1:
-            QMessageBox.information(dlg, 'ERROR', 'Wybrana przez Ciebie warstwa nie zawiera kolumny Evd')
-
-        return index
-
     def init(self):
         self.add_page()
         self.set_margins(10, 20)
-        self.add_font('DejaVu', '', os.path.join(os.path.dirname(__file__), 'DejaVuSansCondensed.ttf'), uni=True)
+        self.add_font('DejaVu', '', os.path.join(os.path.dirname(__file__), 'fonts/DejaVuSansCondensed.ttf'), uni=True)
 
     def report_pdf(self, dlg, layer):
         # Add logo
@@ -238,7 +232,7 @@ class PDF(FPDF):
         # Statystyki
         if dlg.statsCheckbox.isChecked():
             features = layer.getFeatures()
-            evd_index = self.field_must_exist(fields, 'Evd', dlg)
+            evd_index = field_must_exist(fields, 'Evd', dlg)
             if evd_index == -1:
                 return
             evd = []

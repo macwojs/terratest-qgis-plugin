@@ -21,36 +21,24 @@
  *                                                                         *
  ***************************************************************************/
 """
-import imghdr
 import os.path
 
-import PIL.Image
-from PyPDF2 import PdfFileMerger, PdfFileReader
-from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtWidgets import QMessageBox
-from fpdf import FPDF
 # Additional packages
-from numpy import mean, std, around, array, save, load, append
-from qgis.PyQt import QtGui
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, QVariant
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
-from qgis.PyQt.QtWidgets import QFileDialog, QAbstractItemView
-# Initialize Qt resources from file resources.py
-from qgis._core import QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject, QgsVectorLayer, QgsLayoutExporter, \
-    QgsApplication, QgsPrintLayout, QgsLayoutItemMap, QgsLayoutPoint, QgsLayoutSize, QgsUnitTypes, \
-    QgsLayoutItemLabel, QgsLayoutItemPage, QgsLayoutItemScaleBar, QgsPalLayerSettings, QgsVectorLayerSimpleLabeling, \
-    QgsTextFormat, QgsTextBufferSettings, QgsLayoutItemPicture, QgsRasterLayer
 
-from .pdf import PDF
-from .interface.terratest_dialog_base import TerratestDialog
-from .interface.terratest_dialog_is import TerratestDialogIS
-# Import the code for the dialog
-from .interface.terratest_dialog_report import TerratestDialogReport
-from .interface.terratest_dialog_stats_choose import TerratestDialogStatsChoose
-from .interface.terratest_dialog_stats_show import TerratestDialogStatsShow
+from .dialog.CalculateDialog import CalculateDialog
+from .dialog.PrintTemplateDialog import PrintTemplateDialog
+from .dialog.ReadDataDialog import ReadDataDialog
+from .dialog.ReportDialog import ReportDialog
+from .dialog.StatisticsDialog import StatisticsDialog
+
+
+# Initialize Qt resources from file resources.py
+
+
 # Terratest Library
-from .terratest_lib import TerratestRead as TerraLib, TerratestCalculate
 
 
 class Terratest:
@@ -86,41 +74,10 @@ class Terratest:
 
         # Check if plugin was started the first time in current QGIS session
         # Must be set in initGui() to survive plugin reloads
-        self.first_start = None
-        self.first_start_is = None
-        self.first_start_stats = None
-        self.first_start_report = None
-
-        self.dlg = TerratestDialog()
-        self.dlg_is = TerratestDialogIS()
-        self.dlg_stats = TerratestDialogStatsChoose()
-        self.dlg_stats_show = TerratestDialogStatsShow()
-        self.dlg_report = TerratestDialogReport()
-
-        self.layers_is = None
-        self.layers_stats = None
-        self.layers_report = None
-
-        self.settings_path = QgsApplication.qgisSettingsDirPath()
-
-        self.wms_maps = [
-            {
-                "url": "type=xyz&url=https://tile.openstreetmap.org/%7Bz%7D/%7Bx%7D/%7By%7D.png&zmax=19&zmin=0&crs=EPSG3857",
-                "name": "OpenStreetMap"
-            },
-            {
-                "url": "contextualWMSLegend=0&crs=EPSG:4326&dpiMode=7&featureCount=10&format=image/png8&layers=RZab&layers=TPrz&layers=SOd2&layers=SOd1&layers=GNu2&layers=GNu1&layers=TKa2&layers=TKa1&layers=TPi2&layers=TPi1&layers=UTrw&layers=TLes&layers=RKr&layers=RTr&layers=ku7&layers=ku6&layers=ku5&layers=ku4&layers=ku3&layers=ku2&layers=ku1&layers=Mo&layers=Szu&layers=Pl3&layers=Pl2&layers=Pl1&layers=kanOkr&layers=rzOk&layers=row&layers=kan&layers=rz&layers=RowEt&layers=kanEt&layers=rzEt&layers=WPow&layers=LBrzN&layers=LBrz&layers=WPowEt&layers=GrPol&layers=Rez&layers=GrPK&layers=GrPN&layers=GrDz&layers=GrGm&layers=GrPo&layers=GrWo&layers=GrPns&layers=PRur&layers=ZbTA&layers=BudCm&layers=TerCm&layers=BudSp&layers=Szkl&layers=Kap&layers=SwNch&layers=SwCh&layers=BudZr&layers=BudGo&layers=BudPWy&layers=BudP2&layers=BudP1&layers=BudUWy&layers=BudU&layers=BudMWy&layers=BudMJ&layers=BudMW&layers=Bzn&layers=BHydA&layers=BHydL&layers=wyk&layers=wa6&layers=wa5&layers=wa4&layers=wa3&layers=wa2&layers=wa1&layers=IUTA&layers=ObOrA&layers=ObPL&layers=Prom&layers=PomL&layers=MurH&layers=PerA&layers=PerL&layers=Tryb&layers=UTrL&layers=LTra&layers=LKNc&layers=LKBu&layers=LKWs&layers=TSt&layers=LKNelJ&layers=LKNelD&layers=LKNelW&layers=LKZelJ&layers=LKZelD&layers=LKZelW&layers=Scz&layers=Al&layers=AlEt&layers=Sch2&layers=Sch1&layers=DrDGr&layers=DrLGr&layers=JDrLNUt&layers=JDLNTw&layers=JDrZTw&layers=JDrG&layers=DrEk&layers=JDrEk&layers=AuBud&layers=JAu&layers=NazDr&layers=NrDr&layers=Umo&layers=PPdz&layers=Prze&layers=TunK&layers=TunD&layers=Klad&layers=MosK&layers=MosD&layers=UTrP&layers=ObKom&layers=InUTP&layers=ZbTP&layers=NazUl&layers=ObOrP&layers=WyBT&layers=LTel&layers=LEle&layers=ObPP&layers=DrzPomP&layers=e13&layers=e12&layers=e11&layers=e10&layers=e9&layers=e8&layers=e7&layers=e6&layers=e5&layers=e4&layers=e3&layers=e2&layers=e1&layers=s19&layers=s18&layers=s17&layers=s16&layers=s15&layers=s14&layers=s13&layers=s12&layers=s11&layers=s10&layers=s9&layers=s8&layers=s7&layers=s6&layers=s5&layers=s4&layers=s3&layers=s2&layers=s1&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&styles&url=http://mapy.geoportal.gov.pl/wss/service/pub/guest/kompozycja_BDOT10k_WMS/MapServer/WMSServer",
-                "name": "Geoportal - BDOT10K"
-            },
-            {
-                "url": "contextualWMSLegend=0&crs=EPSG:4326&dpiMode=7&featureCount=10&format=image/png8&layers=Raster&styles&url=http://mapy.geoportal.gov.pl/wss/service/img/guest/TOPO/MapServer/WMSServer",
-                "name": "Geoportal - Topo"
-            },
-            {
-                "url": "type=xyz&url=http://mt0.google.com/vt/lyrs%3Ds%26hl%3Den%26x%3D%7Bx%7D%26y%3D%7By%7D%26z%3D%7Bz%7D&zmax=18&zmin=0",
-                "name": "Google - Satelite"
-            },
-        ]
+        self.read_data_dialog = None
+        self.calculate_dialog = None
+        self.stats_dialog = None
+        self.report_dialog = None
 
     # noinspection PyMethodMayBeStatic
     def tr(self, message):
@@ -214,17 +171,17 @@ class Terratest:
     def initGui(self):
         """Create the menu entries and toolbar icons inside the QGIS GUI."""
 
-        icon_path = ':/plugins/terratest/icon.png'
+        icon_path = ':/plugins/terratest/icons/icon.png'
         self.add_action(
             icon_path,
             text=self.tr(u'Wczytaj dane'),
-            callback=self.run,
+            callback=self.run_read_data,
             parent=self.iface.mainWindow())
 
         self.add_action(
             icon_path,
             text=self.tr(u'Wylicz IS/E2'),
-            callback=self.run_is,
+            callback=self.run_calculate,
             parent=self.iface.mainWindow())
 
         self.add_action(
@@ -245,12 +202,6 @@ class Terratest:
             callback=self.run_report,
             parent=self.iface.mainWindow())
 
-        # will be set False in run()
-        self.first_start = True
-        self.first_start_is = True
-        self.first_start_stats = True
-        self.first_start_report = True
-
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
         for action in self.actions:
@@ -259,499 +210,26 @@ class Terratest:
                 action)
             self.iface.removeToolBarIcon(action)
 
-    def choose_files(self):
-        files, selected_filter = QFileDialog.getOpenFileNames(self.dlg, "Select terratest files")
+    def run_read_data(self):
+        if not self.read_data_dialog:
+            self.read_data_dialog = ReadDataDialog(self.iface)
+        self.read_data_dialog.show()
 
-        for i in files:
-            item = QtGui.QStandardItem(os.path.basename(i))
-            terratest_data = TerraLib(i)
-            item.setData(terratest_data)
-            self.dlg.filesView.model().appendRow(item)
-
-    def cancel(self):
-        self.delete_all()
-        self.dlg.close()
-
-    def generate(self):
-        if self.dlg.wmsCheckbox.isChecked():
-            wms_index = self.dlg.wmsList.currentIndex()
-            map = self.wms_maps[wms_index]
-            wms_layer = QgsRasterLayer(map["url"], map["name"], "wms")
-            QgsProject.instance().addMapLayer(wms_layer)
-
-        model = self.dlg.filesView.model()
-        if model.rowCount():
-            vl = self.iface.addVectorLayer("Point?crs=epsg:4326", "terratest_points", "memory")
-            pr = vl.dataProvider()
-            pr.addAttributes([
-                QgsField("Pkt", QVariant.Int),
-                QgsField("name", QVariant.String),
-                QgsField("serial_number", QVariant.String),
-                QgsField("hammer_weight", QVariant.String),
-                QgsField("calibration", QVariant.Date),
-                QgsField("date", QVariant.DateTime),
-                QgsField("X", QVariant.Double),
-                QgsField("Y", QVariant.Double),
-                QgsField("s1", QVariant.String),
-                QgsField("v1max", QVariant.Double),
-                QgsField("s1max", QVariant.Double),
-                QgsField("s2", QVariant.String),
-                QgsField("v2max", QVariant.Double),
-                QgsField("s2max", QVariant.Double),
-                QgsField("s3", QVariant.String),
-                QgsField("v3max", QVariant.Double),
-                QgsField("s3max", QVariant.Double),
-                QgsField("Evd", QVariant.Double),
-                QgsField("average_s", QVariant.Double),
-                QgsField("s/v", QVariant.Double)
-            ])
-            vl.updateFields()
-
-            data = []
-            for row in range(model.rowCount()):
-                item = model.takeItem(row).data()
-                data.append(item)
-
-            lp = 1
-            data.sort(key=lambda x: x.test_datetime)
-            for item in data:
-                cords = item.coordinates_g()
-
-                fet = QgsFeature()
-                fet.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(cords[1], cords[0])))
-                fet.setAttributes([lp] + item.atr_for_layer())
-                pr.addFeatures([fet])
-
-                lp = lp + 1
-
-                vl.updateExtents()
-
-            # LABEL FOR LAYER
-            pal_layer = QgsPalLayerSettings()
-            pal_layer.fieldName = "Pkt"
-
-            # Text format and buffer
-            text_format = QgsTextFormat()
-            text_format.setSize(12)
-            buffer_settings = QgsTextBufferSettings()
-            buffer_settings.setEnabled(True)
-            buffer_settings.setSize(1)
-            buffer_settings.setColor(QColor("white"))
-            text_format.setBuffer(buffer_settings)
-            pal_layer.setFormat(text_format)
-
-            # Label offset
-            pal_layer.placement = 1
-            pal_layer.quadOffset = 4
-            pal_layer.xOffset = 2.0
-            pal_layer.yOffset = -3.0
-
-            labeler = QgsVectorLayerSimpleLabeling(pal_layer)
-            vl.setLabeling(labeler)
-            vl.setLabelsEnabled(True)
-            vl.triggerRepaint()
-
-            # FIXME Zoom to loaded layer
-            # canvas = self.iface.mapCanvas()
-            # vl.selectAll()
-            # canvas.zoomToSelected()
-            # self.iface.actionZoomToSelected().trigger()
-            # vl.removeSelection()
-            # canvas.refresh()
-
-        self.cancel()
-
-    def show_details(self, current, previous):
-        item = self.dlg.filesView.model().itemFromIndex(current).data()
-        text = "Nazwa: " + item.name + "\n" \
-               + "Data: " + item.test_datetime.strftime("%d.%m.%Y") + "\n" \
-               + "Godzina: " + item.test_datetime.strftime("%H:%M:%S") + "\n" \
-               + "Evd: " + "{:.3f}".format(item.evd)
-        self.dlg.detailsText.setPlainText(text)
-
-    def delete(self):
-        selected_list = self.dlg.filesView.selectedIndexes()
-        selected_list = sorted(selected_list, key=lambda x: -x.row())
-        for i in selected_list:
-            self.dlg.filesView.model().takeRow(i.row())
-
-    def delete_all(self):
-        self.dlg.filesView.model().clear()
-
-    def run(self):
-        """Run method that performs all the real work"""
-
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start:
-            self.first_start = False
-
-            model = QtGui.QStandardItemModel()
-            self.dlg.filesView.setModel(model)
-            # self.dlg.filesView.setSelectionMode(QAbstractItemView.ExtendedSelection)
-            self.dlg.filesView.setSelectionMode(QAbstractItemView.ExtendedSelection)
-
-            self.dlg.filesView.selectionModel().currentChanged.connect(self.show_details)
-
-            self.dlg.openButton.clicked.connect(self.choose_files)
-            self.dlg.cancelButton.clicked.connect(self.cancel)
-            self.dlg.generateButton.clicked.connect(self.generate)
-            self.dlg.deleteButton.clicked.connect(self.delete)
-            self.dlg.deleteAllButton.clicked.connect(self.delete_all)
-
-            self.dlg.wmsList.addItems([map["name"] for map in self.wms_maps])
-
-        # show the dialog
-        self.dlg.show()
-        # Run the dialog event loop
-        result = self.dlg.exec_()
-        # See if OK was pressed
-        if result:
-            # Do something useful here - delete the line containing pass and
-            # substitute with your code.
-            pass
-
-    def field_must_exist(self, fields, field):
-        index = fields.indexFromName(field)
-        if index == -1:
-            QMessageBox.information(self.dlg_is, 'ERROR', 'Wybrana przez Ciebie warstwa nie zawiera kolumny Evd')
-
-        return index
-
-    def calculate_is_e2(self):
-        selected_layer = self.layers_is[self.dlg_is.layerList.currentIndex()]
-        fields = selected_layer.fields()
-
-        index = self.field_must_exist(fields, 'Evd')
-        if index == -1:
-            return
-
-        if not fields[index].type() == QVariant.Double:
-            QMessageBox.information(self.dlg_is, 'ERROR', 'Kolumna w wybranej przez Ciebie warstwie nie jest typu '
-                                                          'Double')
-            return
-
-        soil = self.dlg_is.soilList.currentIndex()
-        granularity = self.dlg_is.granularityList.currentIndex()
-
-        layer_provider = selected_layer.dataProvider()
-
-        selected_layer.startEditing()
-
-        if self.dlg_is.isCheckbox.isChecked():
-            index_is = fields.indexFromName('Is')
-            if index_is == -1:
-                layer_provider.addAttributes([QgsField('Is', QVariant.Double)])
-                selected_layer.updateFields()
-                fields = selected_layer.fields()
-                index_is = fields.indexFromName('Is')
-
-            features = selected_layer.getFeatures()
-            for feature in features:
-                is_value = TerratestCalculate.calculate_is(TerratestCalculate.GRANULARITIES[granularity],
-                                                           TerratestCalculate.SOILS[soil],
-                                                           feature.attributes()[index])
-                selected_layer.changeAttributeValue(feature.id(), index_is, round(is_value, 3))
-
-        if self.dlg_is.e2Checkbox.isChecked():
-            index_e2 = fields.indexFromName('E2')
-            if index_e2 == -1:
-                layer_provider.addAttributes([QgsField('E2', QVariant.Double)])
-                selected_layer.updateFields()
-                fields = selected_layer.fields()
-                index_e2 = fields.indexFromName('E2')
-
-            features = selected_layer.getFeatures()
-            for feature in features:
-                e2_value = TerratestCalculate.calculate_e2(TerratestCalculate.GRANULARITIES[granularity],
-                                                           TerratestCalculate.SOILS[soil],
-                                                           feature.attributes()[index])
-                selected_layer.changeAttributeValue(feature.id(), index_e2, round(e2_value, 3))
-
-        if self.dlg_is.idCheckbox.isChecked():
-            index_id = fields.indexFromName('Id')
-            if index_id == -1:
-                layer_provider.addAttributes([QgsField('Id', QVariant.Double)])
-                selected_layer.updateFields()
-                fields = selected_layer.fields()
-                index_id = fields.indexFromName('Id')
-
-            features = selected_layer.getFeatures()
-            id_type = self.dlg_is.idMethodList.currentIndex()
-            for feature in features:
-                id_value = TerratestCalculate.calculate_id(TerratestCalculate.GRANULARITIES[granularity],
-                                                           TerratestCalculate.SOILS[soil],
-                                                           feature.attributes()[index],
-                                                           TerratestCalculate.ID_METHOD[id_type])
-                selected_layer.changeAttributeValue(feature.id(), index_id, round(id_value, 3))
-
-        selected_layer.commitChanges()
-
-        self.cancel_is()
-
-    def cancel_is(self):
-        self.dlg_is.layerList.clear()
-        self.dlg_is.close()
-
-    def run_is(self):
-        """Run method that performs all the real work"""
-
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start_is:
-            self.first_start_is = False
-
-            self.dlg_is.countButton.clicked.connect(self.calculate_is_e2)
-            self.dlg_is.cancelButton.clicked.connect(self.cancel_is)
-
-            self.dlg_is.soilList.addItems([soil for soil in TerratestCalculate.SOILS])
-            self.dlg_is.granularityList.addItems([granularity for granularity in TerratestCalculate.GRANULARITIES])
-            self.dlg_is.idMethodList.addItems([id_type for id_type in TerratestCalculate.ID_METHOD])
-
-        self.layers_is = [layer for layer in QgsProject.instance().mapLayers().values() if
-                          layer.type() == QgsVectorLayer.VectorLayer]
-        # Clear the contents of the comboBox from previous runs
-        self.dlg_is.layerList.clear()
-        # Populate the layerList with names of all the loaded layers
-        self.dlg_is.layerList.addItems([layer.name() for layer in self.layers_is])
-
-        # show the dialog
-        self.dlg_is.show()
-        # Run the dialog event loop
-        self.dlg_is.exec_()
-
-    def cancel_stats(self):
-        self.dlg_stats.layerList.clear()
-        self.dlg_stats.close()
-
-    def calculate_stats(self):
-        selected_layer = self.layers_stats[self.dlg_stats.layerList.currentIndex()]
-        fields = selected_layer.fields()
-
-        index = self.field_must_exist(fields, 'Evd')
-        if index == -1:
-            return
-
-        evd = []
-        features = selected_layer.getFeatures()
-        for feature in features:
-            evd.append(feature.attributes()[index])
-
-        if self.dlg_stats.meanCheckbox.isChecked():
-            mean_value = around(mean(evd), 1)
-            self.dlg_stats_show.meanText.setText(str(mean_value))
-
-        if self.dlg_stats.stdDevCheckbox.isChecked():
-            std_value = around(std(evd), 3)
-            self.dlg_stats_show.stdDevText.setText(str(std_value))
-
-        if self.dlg_stats.coeffVariationCheckbox.isChecked():
-            coeff_var = around((std(evd) / mean(evd)) * 100, 1)
-            self.dlg_stats_show.coeffVariationText.setText(str(coeff_var) + '%')
-            if coeff_var < 30:
-                result = 'warstwa jednorodna'
-                color = 'green'
-            else:
-                result = 'warstwa niejednorodna'
-                color = 'red'
-
-            self.dlg_stats_show.resultText.setText(result)
-            self.dlg_stats_show.resultText.setStyleSheet('color: ' + color)
-
-        self.dlg_stats.close()
-        self.dlg_stats_show.show()
+    def run_calculate(self):
+        if not self.calculate_dialog:
+            self.calculate_dialog = CalculateDialog(self.iface)
+        self.calculate_dialog.show()
 
     def run_stats(self):
-        """Run method that performs all the real work"""
-
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start_stats:
-            self.first_start_stats = False
-
-            self.dlg_stats.countButton.clicked.connect(self.calculate_stats)
-            self.dlg_stats.cancelButton.clicked.connect(self.cancel_stats)
-
-        self.layers_stats = [layer for layer in QgsProject.instance().mapLayers().values() if
-                             layer.type() == QgsVectorLayer.VectorLayer]
-        # Clear the contents of the comboBox from previous runs
-        self.dlg_stats.layerList.clear()
-        # Populate the layerList with names of all the loaded layers
-        self.dlg_stats.layerList.addItems([layer.name() for layer in self.layers_stats])
-
-        # show the dialog
-        self.dlg_stats.show()
-        # Run the dialog event loop
-        self.dlg_stats.exec_()
-
-    def cancel_report(self):
-        self.dlg_report.mapsList.clear()
-        self.dlg_report.outputFileText.clear()
-
-        self.dlg_report.close()
-
-    def generate_report(self):
-        output_file = self.dlg_report.outputFileText.text()
-        if output_file == '' or output_file == None:
-            QMessageBox.information(self.dlg_report, 'ERROR', 'Musisz określić miejsce zapisu raportu')
-            return
-
-        pdf = PDF(format='A4')
-        pdf.init()
-        pdf.report_pdf(self.dlg_report, self.layers_report[self.dlg_report.layerList.currentIndex()])
-        if self.dlg_report.mapCheckbox.isChecked():
-            map_name = self.dlg_report.mapsList.currentText()
-        else:
-            map_name = None
-        pdf.save(output_file, map_name)
-
-        # Zapisywanie danych z formularza na przyszlosc
-        np_array = array([
-            self.dlg_report.testObjectLine.text(),
-            self.dlg_report.locationLine.text(),
-            self.dlg_report.buyerLine.text(),
-            self.dlg_report.weatherLine.text(),
-            self.dlg_report.layerLine.text(),
-            self.dlg_report.soilTestLine.text(),
-            self.dlg_report.soilEqualLine.text(),
-            self.dlg_report.granularityLine.text(),
-            self.dlg_report.testerLine.text(),
-            self.dlg_report.creatorLine.text(),
-            self.dlg_report.cityLine.text(),
-            self.dlg_report.dateLine.text(),
-            self.dlg_report.attachLine.text()
-        ])
-        settings_path = os.path.join(self.settings_path, 'report_form.npy')
-        save(settings_path, np_array)
-
-    def output_file_report(self):
-        filename, _filter = QFileDialog.getSaveFileName(
-            self.dlg_report, "Select output file ", "", '*.pdf')
-        self.dlg_report.outputFileText.setText(filename)
-
-    def image_file_report(self):
-        filename, _filter = QFileDialog.getOpenFileName(
-            self.dlg_report, "Select logo file ", "", '*.png,*.jpg')
-        self.dlg_report.imageFileText.setText(filename)
+        if not self.stats_dialog:
+            self.stats_dialog = StatisticsDialog(self.iface)
+        self.stats_dialog.show()
 
     def run_report(self):
-        """Run method that performs all the real work"""
-
-        # Create the dialog with elements (after translation) and keep reference
-        # Only create GUI ONCE in callback, so that it will only load when the plugin is started
-        if self.first_start_stats:
-            self.first_start_stats = False
-
-            self.dlg_report.generateButton.clicked.connect(self.generate_report)
-            self.dlg_report.cancelButton.clicked.connect(self.cancel_report)
-            self.dlg_report.outputFileButton.clicked.connect(self.output_file_report)
-            self.dlg_report.imageFileButton.clicked.connect(self.image_file_report)
-
-        # Load vector layers to interface
-        self.layers_report = [layer for layer in QgsProject.instance().mapLayers().values() if
-                              layer.type() == QgsVectorLayer.VectorLayer]
-        self.dlg_report.layerList.clear()
-        self.dlg_report.layerList.addItems([layer.name() for layer in self.layers_report])
-
-        # Load maps layouts to interface
-        manager = QgsProject.instance().layoutManager()
-        self.dlg_report.mapsList.clear()
-        self.dlg_report.mapsList.addItems([layer.name() for layer in manager.printLayouts()])
-
-        # Load settings
-        try:
-            report_settings_array = load(os.path.join(self.settings_path, 'report_form.npy'))
-        except:
-            pass
-        else:
-            elements = [
-                self.dlg_report.testObjectLine,
-                self.dlg_report.locationLine,
-                self.dlg_report.buyerLine,
-                self.dlg_report.weatherLine,
-                self.dlg_report.layerLine,
-                self.dlg_report.soilTestLine,
-                self.dlg_report.soilEqualLine,
-                self.dlg_report.granularityLine,
-                self.dlg_report.testerLine,
-                self.dlg_report.creatorLine,
-                self.dlg_report.cityLine,
-                self.dlg_report.dateLine,
-                self.dlg_report.attachLine
-            ]
-            for i in range(report_settings_array.size):
-                elements[i].setText(report_settings_array[i])
-
-        # show the dialog
-        self.dlg_report.show()
-        # Run the dialog event loop
-        self.dlg_report.exec_()
+        if not self.report_dialog:
+            self.report_dialog = ReportDialog(self.iface)
+        self.report_dialog.show()
 
     def run_print_layout(self):
-        name = "Terratest default"
-        manager = QgsProject.instance().layoutManager()
-        # for layer in manager.printLayouts():
-        #     if layer.name() == name:
-        #         QMessageBox.information(self.dlg_is, 'ERROR', 'Już istnieje domyślny szablon wydruku (Terratest '
-        #                                                       'default)')
-        #         return
-
-        layouts_list = manager.printLayouts()
-        for layout in layouts_list:
-            if layout.name() == name:
-                manager.removeLayout(layout)
-
-        project = QgsProject.instance()
-        layout = QgsPrintLayout(project)
-        layout.initializeDefaults()
-
-        # Change for portrait
-        pc = layout.pageCollection()
-        pc.page(0).setPageSize('A4', QgsLayoutItemPage.Orientation.Portrait)
-
-        layout.setName(name)
-        project.layoutManager().addLayout(layout)
-
-        map = QgsLayoutItemMap(layout)
-        map.setRect(20, 20, 20, 20)
-        canvas = self.iface.mapCanvas()
-        map.setExtent(canvas.extent())  # sets map extent to current map canvas
-        map.setFrameEnabled(True)
-        layout.addLayoutItem(map)
-        # Move & Resize
-        map.attemptMove(QgsLayoutPoint(10, 40, QgsUnitTypes.LayoutMillimeters))
-        map.attemptResize(QgsLayoutSize(190, 220, QgsUnitTypes.LayoutMillimeters))
-
-        title = QgsLayoutItemLabel(layout)
-        title.setText("Mapa lokalizacji punktów pomiarowych")
-        title.setFont(QFont("DejaVu Sans", 24))
-        title.adjustSizeToText()
-        layout.addLayoutItem(title)
-        title.attemptMove(QgsLayoutPoint(21, 27, QgsUnitTypes.LayoutMillimeters))
-
-        att_text = QgsLayoutItemLabel(layout)
-        att_text.setText("Zal. ")
-        att_text.setFont(QFont("DejaVu Sans", 18))
-        att_text.adjustSizeToText()
-        layout.addLayoutItem(att_text)
-        att_text.attemptMove(QgsLayoutPoint(160, 15, QgsUnitTypes.LayoutMillimeters))
-
-        scalebar = QgsLayoutItemScaleBar(layout)
-        scalebar.setLinkedMap(map)
-        scalebar.setStyle('Single Box')
-        scalebar.setFont(QFont("DejaVu Sans", 18))
-        scalebar.applyDefaultSize()
-        scalebar.setSegmentSizeMode(1)
-        scalebar.setNumberOfSegmentsLeft(0)
-        scalebar.setMaximumBarWidth(210 / 3)
-        scalebar.update()
-        layout.addLayoutItem(scalebar)
-        scalebar.attemptMove(QgsLayoutPoint(20, 265, QgsUnitTypes.LayoutMillimeters))
-
-        arrow = QgsLayoutItemPicture(layout)
-        arrow.setPicturePath(os.path.join(os.path.dirname(__file__), 'north_arrow.svg'))
-        layout.addLayoutItem(arrow)
-        arrow.attemptMove(QgsLayoutPoint(15, 45, QgsUnitTypes.LayoutMillimeters))
-        arrow.attemptResize(QgsLayoutSize(30, 30, QgsUnitTypes.LayoutMillimeters))
-
-        QMessageBox.information(self.dlg_is, 'SUCCESS', 'Poprawnie dodano szablon wydruku.')
+        print_template_dialog = PrintTemplateDialog(self.iface)
+        print_template_dialog.import_template()
