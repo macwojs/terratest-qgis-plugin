@@ -94,7 +94,7 @@ class CalculateDialog(BaseDialog):
 
         selected_layer.commitChanges()
 
-        self.cancel_is()
+        self.cancel()
 
     def cancel(self):
         self.dlg.layerList.clear()
