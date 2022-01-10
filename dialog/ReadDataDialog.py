@@ -182,14 +182,6 @@ class ReadDataDialog(BaseDialog):
             vl.setLabelsEnabled(True)
             vl.triggerRepaint()
 
-            # FIXME Zoom to loaded layer
-            # canvas = self.iface.mapCanvas()
-            # vl.selectAll()
-            # canvas.zoomToSelected()
-            # self.iface.actionZoomToSelected().trigger()
-            # vl.removeSelection()
-            # canvas.refresh()
-
         self.cancel()
 
     def show_details(self, current, previous):

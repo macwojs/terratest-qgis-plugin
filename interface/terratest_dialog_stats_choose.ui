@@ -33,7 +33,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Wybierz wartwe do obliczenia statystyk</string>
+    <string>Wybierz wartwę do obliczenia statystyk</string>
    </property>
   </widget>
   <widget class="QPushButton" name="cancelButton">

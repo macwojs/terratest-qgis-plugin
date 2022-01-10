@@ -33,7 +33,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Wybierz wartwe do przeliczenia</string>
+    <string>Wybierz wartwę do przeliczenia</string>
    </property>
   </widget>
   <widget class="QComboBox" name="soilList">

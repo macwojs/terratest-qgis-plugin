@@ -180,7 +180,7 @@ class Terratest:
 
         self.add_action(
             icon_path,
-            text=self.tr(u'Wylicz IS/E2'),
+            text=self.tr(u'Wylicz IS/ID/E2'),
             callback=self.run_calculate,
             parent=self.iface.mainWindow())
 
@@ -198,7 +198,7 @@ class Terratest:
 
         self.add_action(
             icon_path,
-            text=self.tr(u'Report'),
+            text=self.tr(u'Raport'),
             callback=self.run_report,
             parent=self.iface.mainWindow())
 
