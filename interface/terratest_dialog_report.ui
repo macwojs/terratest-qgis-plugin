@@ -25,8 +25,11 @@
      <height>32</height>
     </rect>
    </property>
+   <property name="text">
+    <string/>
+   </property>
    <property name="placeholderText">
-    <string>Miasto</string>
+    <string>Miejscowość</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="dateLine">
